@@ -71,7 +71,7 @@ export default function Home() {
   const [title, setTitle] = useState("");
   const [activeTab, setActiveTab] = useState("upload");
   const [dragOver, setDragOver] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -100,12 +100,9 @@ export default function Home() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (files: File[]) => {
       const formData = new FormData();
-      formData.append("file", file);
-      if (title.trim()) {
-        formData.append("title", title.trim());
-      }
+      files.forEach((f) => formData.append("files", f));
       const res = await fetch("/api/documents/upload", {
         method: "POST",
         body: formData,
@@ -116,13 +113,26 @@ export default function Home() {
       }
       return res.json();
     },
-    onSuccess: (doc: Document) => {
+    onSuccess: (data: { documents: Document[]; errors: string[] }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-      setSelectedFile(null);
+      setSelectedFiles([]);
       setTitle("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      toast({ title: "Document uploaded", description: "Analysis is in progress. This may take a minute." });
-      navigate(`/analysis/${doc.id}`);
+      const count = data.documents.length;
+      if (data.errors.length > 0) {
+        toast({
+          title: `${count} file${count !== 1 ? "s" : ""} uploaded`,
+          description: `${data.errors.length} file${data.errors.length !== 1 ? "s" : ""} failed: ${data.errors.join(", ")}`,
+        });
+      } else {
+        toast({
+          title: `${count} document${count !== 1 ? "s" : ""} uploaded`,
+          description: "Analysis is in progress. This may take a minute.",
+        });
+      }
+      if (data.documents.length === 1) {
+        navigate(`/analysis/${data.documents[0].id}`);
+      }
     },
     onError: (err: Error) => {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -148,35 +158,57 @@ export default function Home() {
   };
 
   const handleFileUpload = () => {
-    if (!selectedFile) {
-      toast({ title: "No file selected", description: "Please select a file to upload.", variant: "destructive" });
+    if (selectedFiles.length === 0) {
+      toast({ title: "No files selected", description: "Please select files to upload.", variant: "destructive" });
       return;
     }
-    uploadMutation.mutate(selectedFile);
+    uploadMutation.mutate(selectedFiles);
   };
 
-  const handleFileSelect = useCallback((file: File) => {
+  const validateAndAddFiles = useCallback((newFiles: FileList | File[]) => {
     const allowed = ["application/pdf", "text/plain", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-    if (!allowed.includes(file.type)) {
-      toast({ title: "Unsupported file", description: "Please upload a PDF, TXT, DOC, or DOCX file.", variant: "destructive" });
-      return;
+    const validFiles: File[] = [];
+    let skipped = 0;
+
+    Array.from(newFiles).forEach((file) => {
+      if (!allowed.includes(file.type)) {
+        skipped++;
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        skipped++;
+        return;
+      }
+      validFiles.push(file);
+    });
+
+    if (skipped > 0) {
+      toast({
+        title: `${skipped} file${skipped !== 1 ? "s" : ""} skipped`,
+        description: "Only PDF, TXT, DOC, and DOCX files under 10MB are accepted.",
+        variant: "destructive",
+      });
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Maximum file size is 10MB.", variant: "destructive" });
-      return;
+
+    if (validFiles.length > 0) {
+      setSelectedFiles((prev) => {
+        const combined = [...prev, ...validFiles];
+        return combined.slice(0, 10);
+      });
     }
-    setSelectedFile(file);
-    if (!title.trim()) {
-      setTitle(file.name.replace(/\.[^/.]+$/, ""));
-    }
-  }, [title, toast]);
+  }, [toast]);
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
-  }, [handleFileSelect]);
+    if (e.dataTransfer.files.length > 0) {
+      validateAndAddFiles(e.dataTransfer.files);
+    }
+  }, [validateAndAddFiles]);
 
   const loadSample = (sample: typeof sampleDocuments[0]) => {
     setTitle(sample.title);

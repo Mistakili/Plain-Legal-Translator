@@ -102,147 +102,103 @@ export async function registerRoutes(
       const doc = await storage.createDocument(parsed.data);
       res.json(doc);
 
-      try {
-        await storage.updateDocument(doc.id, { status: "analyzing" });
-
-        const client = getOpenAI();
-        console.log("Starting AI analysis for document:", doc.id);
-
-        const completion = await client.chat.completions.create({
-          model: "llama3.3-70b-instruct",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `Please analyze this legal document:\n\n${parsed.data.originalText}` },
-          ],
-          temperature: 0.3,
-          max_tokens: 4096,
-        });
-
-        const content = completion.choices[0]?.message?.content;
-        if (!content) {
-          console.error("No content in AI response for document:", doc.id);
-          await storage.updateDocument(doc.id, { status: "error" });
-          return;
-        }
-
-        let analysis;
-        try {
-          const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          const rawAnalysis = JSON.parse(cleaned);
-          const validated = analysisSchema.safeParse(rawAnalysis);
-          if (!validated.success) {
-            console.error("AI output validation failed:", validated.error.message);
-            await storage.updateDocument(doc.id, { status: "error" });
-            return;
-          }
-          analysis = validated.data;
-        } catch {
-          console.error("Failed to parse AI JSON response for document:", doc.id);
-          await storage.updateDocument(doc.id, { status: "error" });
-          return;
-        }
-
-        await storage.updateDocument(doc.id, {
-          analysis,
-          riskLevel: analysis.overallRiskLevel,
-          status: "complete",
-        });
-        console.log("Analysis complete for document:", doc.id, "Risk:", analysis.overallRiskLevel);
-      } catch (err) {
-        console.error("Analysis error:", err);
-        await storage.updateDocument(doc.id, { status: "error" });
-      }
+      analyzeDocument(doc.id, parsed.data.originalText);
     } catch (err) {
       console.error("Create document error:", err);
       res.status(500).json({ error: "Failed to create document" });
     }
   });
 
-  app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
+  async function extractText(file: Express.Multer.File): Promise<string> {
+    if (file.mimetype === "application/pdf") {
+      const pdfData = await pdfParse(file.buffer);
+      return pdfData.text;
+    }
+    return file.buffer.toString("utf-8");
+  }
+
+  async function analyzeDocument(docId: string, text: string) {
     try {
-      const file = req.file;
-      if (!file) {
-        return res.status(400).json({ error: "No file uploaded" });
-      }
+      await storage.updateDocument(docId, { status: "analyzing" });
+      const client = getOpenAI();
+      console.log("Starting AI analysis for document:", docId);
 
-      let extractedText = "";
-      if (file.mimetype === "application/pdf") {
-        try {
-          const pdfData = await pdfParse(file.buffer);
-          extractedText = pdfData.text;
-        } catch {
-          return res.status(400).json({ error: "Failed to parse PDF. The file may be corrupted or image-only." });
-        }
-      } else {
-        extractedText = file.buffer.toString("utf-8");
-      }
-
-      if (!extractedText.trim()) {
-        return res.status(400).json({ error: "No readable text found in the uploaded file." });
-      }
-
-      const title = req.body.title || file.originalname.replace(/\.[^/.]+$/, "") || "Uploaded Document";
-
-      const doc = await storage.createDocument({
-        title,
-        originalText: extractedText.trim(),
+      const completion = await client.chat.completions.create({
+        model: "llama3.3-70b-instruct",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: `Please analyze this legal document:\n\n${text}` },
+        ],
+        temperature: 0.3,
+        max_tokens: 4096,
       });
 
-      res.json(doc);
-
-      try {
-        await storage.updateDocument(doc.id, { status: "analyzing" });
-        const client = getOpenAI();
-        console.log("Starting AI analysis for uploaded document:", doc.id);
-
-        const completion = await client.chat.completions.create({
-          model: "llama3.3-70b-instruct",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `Please analyze this legal document:\n\n${extractedText.trim()}` },
-          ],
-          temperature: 0.3,
-          max_tokens: 4096,
-        });
-
-        const content = completion.choices[0]?.message?.content;
-        if (!content) {
-          await storage.updateDocument(doc.id, { status: "error" });
-          return;
-        }
-
-        let analysis;
-        try {
-          const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          const rawAnalysis = JSON.parse(cleaned);
-          const validated = analysisSchema.safeParse(rawAnalysis);
-          if (!validated.success) {
-            console.error("AI output validation failed:", validated.error.message);
-            await storage.updateDocument(doc.id, { status: "error" });
-            return;
-          }
-          analysis = validated.data;
-        } catch {
-          await storage.updateDocument(doc.id, { status: "error" });
-          return;
-        }
-
-        await storage.updateDocument(doc.id, {
-          analysis,
-          riskLevel: analysis.overallRiskLevel,
-          status: "complete",
-        });
-        console.log("Upload analysis complete for document:", doc.id);
-      } catch (err) {
-        console.error("Upload analysis error:", err);
-        await storage.updateDocument(doc.id, { status: "error" });
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        await storage.updateDocument(docId, { status: "error" });
+        return;
       }
+
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const rawAnalysis = JSON.parse(cleaned);
+      const validated = analysisSchema.safeParse(rawAnalysis);
+      if (!validated.success) {
+        console.error("AI output validation failed:", validated.error.message);
+        await storage.updateDocument(docId, { status: "error" });
+        return;
+      }
+
+      await storage.updateDocument(docId, {
+        analysis: validated.data,
+        riskLevel: validated.data.overallRiskLevel,
+        status: "complete",
+      });
+      console.log("Analysis complete for document:", docId);
+    } catch (err) {
+      console.error("Analysis error for document:", docId, err);
+      await storage.updateDocument(docId, { status: "error" });
+    }
+  }
+
+  app.post("/api/documents/upload", upload.array("files", 10), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+
+      const results: any[] = [];
+      const errors: string[] = [];
+
+      for (const file of files) {
+        try {
+          const extractedText = await extractText(file);
+          if (!extractedText.trim()) {
+            errors.push(`${file.originalname}: No readable text found`);
+            continue;
+          }
+
+          const title = file.originalname.replace(/\.[^/.]+$/, "") || "Uploaded Document";
+          const doc = await storage.createDocument({
+            title,
+            originalText: extractedText.trim(),
+          });
+          results.push(doc);
+
+          analyzeDocument(doc.id, extractedText.trim());
+        } catch {
+          errors.push(`${file.originalname}: Failed to process file`);
+        }
+      }
+
+      if (results.length === 0) {
+        return res.status(400).json({ error: errors.join("; ") || "Failed to process any files" });
+      }
+
+      res.json({ documents: results, errors });
     } catch (err: any) {
       console.error("Upload error:", err);
-      if (err.message?.includes("Only PDF")) {
-        return res.status(400).json({ error: err.message });
-      }
-      res.status(500).json({ error: "Failed to process uploaded file" });
+      res.status(500).json({ error: "Failed to process uploaded files" });
     }
   });
 
