@@ -4,13 +4,13 @@ import { storage } from "./storage";
 import { insertDocumentSchema, analysisSchema, insertChatMessageSchema } from "@shared/schema";
 import OpenAI from "openai";
 import multer from "multer";
-let pdfParseFn: ((buffer: Buffer) => Promise<{ text: string }>) | null = null;
-async function getPdfParser() {
-  if (!pdfParseFn) {
+let PDFParseClass: any = null;
+async function getPDFParseClass() {
+  if (!PDFParseClass) {
     const mod = await import("pdf-parse");
-    pdfParseFn = (mod as any).PDFParse || (mod as any).default || mod;
+    PDFParseClass = (mod as any).PDFParse;
   }
-  return pdfParseFn;
+  return PDFParseClass;
 }
 
 const upload = multer({
@@ -116,9 +116,10 @@ export async function registerRoutes(
 
   async function extractText(file: Express.Multer.File): Promise<string> {
     if (file.mimetype === "application/pdf") {
-      const parser = await getPdfParser();
-      const pdfData = await parser(file.buffer);
-      return pdfData.text;
+      const PDFParse = await getPDFParseClass();
+      const parser = new PDFParse({ data: file.buffer });
+      const result = await parser.getText();
+      return result.text || "";
     }
     return file.buffer.toString("utf-8");
   }
