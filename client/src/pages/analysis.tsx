@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +22,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   FileText,
@@ -42,12 +51,19 @@ import {
   Sparkles,
   User,
   Bot,
+  PenTool,
+  Download,
+  Mail,
+  Clock,
+  Ban,
 } from "lucide-react";
 import { SiDigitalocean } from "react-icons/si";
-import { type Document, type Analysis, type ChatMessage } from "@shared/schema";
+import { type Document, type Analysis, type ChatMessage, type SignatureRequest } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
+import SignaturePad from "@/components/signature-pad";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 const severityConfig = {
   low: {
@@ -433,6 +449,398 @@ function AnalyzingState() {
   );
 }
 
+async function generateSignedPdf(
+  docTitle: string,
+  summary: string,
+  signatureImageData: string,
+  signerName: string,
+  signedDate: string,
+) {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const page = pdfDoc.addPage([612, 792]);
+  const { width, height } = page.getSize();
+  let y = height - 50;
+
+  page.drawText("Signed Document", {
+    x: 50,
+    y,
+    size: 22,
+    font: boldFont,
+    color: rgb(0.08, 0.27, 0.53),
+  });
+  y -= 30;
+
+  page.drawText(docTitle, {
+    x: 50,
+    y,
+    size: 14,
+    font: boldFont,
+    color: rgb(0, 0, 0),
+  });
+  y -= 30;
+
+  page.drawLine({
+    start: { x: 50, y },
+    end: { x: width - 50, y },
+    thickness: 1,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+  y -= 25;
+
+  page.drawText("Summary", {
+    x: 50,
+    y,
+    size: 12,
+    font: boldFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+  y -= 18;
+
+  const maxLineWidth = width - 100;
+  const words = summary.split(" ");
+  let line = "";
+  for (const word of words) {
+    const testLine = line ? `${line} ${word}` : word;
+    const testWidth = font.widthOfTextAtSize(testLine, 10);
+    if (testWidth > maxLineWidth && line) {
+      page.drawText(line, { x: 50, y, size: 10, font, color: rgb(0.3, 0.3, 0.3) });
+      y -= 14;
+      line = word;
+      if (y < 200) break;
+    } else {
+      line = testLine;
+    }
+  }
+  if (line && y >= 200) {
+    page.drawText(line, { x: 50, y, size: 10, font, color: rgb(0.3, 0.3, 0.3) });
+    y -= 14;
+  }
+
+  y = Math.min(y - 30, 250);
+
+  page.drawLine({
+    start: { x: 50, y },
+    end: { x: width - 50, y },
+    thickness: 1,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+  y -= 25;
+
+  page.drawText("Signature", {
+    x: 50,
+    y,
+    size: 12,
+    font: boldFont,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+  y -= 10;
+
+  try {
+    const base64Data = signatureImageData.split(",")[1];
+    if (base64Data) {
+      const sigBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+      const sigImage = await pdfDoc.embedPng(sigBytes);
+      const sigDims = sigImage.scale(0.3);
+      y -= sigDims.height;
+      page.drawImage(sigImage, {
+        x: 50,
+        y,
+        width: sigDims.width,
+        height: sigDims.height,
+      });
+      y -= 10;
+    }
+  } catch {
+    y -= 30;
+  }
+
+  page.drawText(`Signed by ${signerName} on ${signedDate}`, {
+    x: 50,
+    y,
+    size: 10,
+    font,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${docTitle.replace(/[^a-zA-Z0-9]/g, "_")}_signed.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function SignaturesPanel({
+  documentId,
+  docTitle,
+  summary,
+}: {
+  documentId: string;
+  docTitle: string;
+  summary: string;
+}) {
+  const [showSignDialog, setShowSignDialog] = useState(false);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [lastSignedData, setLastSignedData] = useState<{ signatureData: string; signerName: string; signedAt: string } | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [requestMessage, setRequestMessage] = useState("");
+
+  const { data: signatureRequests = [], isLoading: loadingRequests } = useQuery<SignatureRequest[]>({
+    queryKey: ["/api/documents", documentId, "signatures"],
+  });
+
+  const ownerSignature = signatureRequests.find(r => r.status === "signed" && r.senderUserId === r.senderUserId && r.recipientName !== "" && r.signatureId);
+  const externalRequests = signatureRequests.filter(r => r !== ownerSignature || r.recipientEmail !== "");
+  const signedData = lastSignedData ? {
+    signatureData: lastSignedData.signatureData,
+    signerName: lastSignedData.signerName,
+    signedAt: lastSignedData.signedAt,
+  } : ownerSignature ? {
+    signatureData: "",
+    signerName: ownerSignature.recipientName,
+    signedAt: ownerSignature.signedAt ? new Date(ownerSignature.signedAt).toLocaleString() : "Signed",
+  } : null;
+
+  const signMutation = useMutation({
+    mutationFn: async (payload: { signatureData: string; signatureType: string; signerName: string }) => {
+      const res = await apiRequest("POST", `/api/documents/${documentId}/sign`, payload);
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents", documentId, "signatures"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/signatures"] });
+      setShowSignDialog(false);
+      setLastSignedData({
+        signatureData: variables.signatureData,
+        signerName: variables.signerName,
+        signedAt: new Date().toLocaleString(),
+      });
+    },
+  });
+
+  const requestMutation = useMutation({
+    mutationFn: async (payload: { recipientEmail: string; recipientName: string; message?: string }) => {
+      const res = await apiRequest("POST", `/api/documents/${documentId}/request-signature`, payload);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents", documentId, "signatures"] });
+      setShowRequestDialog(false);
+      setRecipientEmail("");
+      setRecipientName("");
+      setRequestMessage("");
+    },
+  });
+
+  const handleSign = (signatureData: string, type: "draw" | "type" | "upload", signerName: string) => {
+    signMutation.mutate({ signatureData, signatureType: type, signerName });
+  };
+
+  const handleRequestSignature = () => {
+    if (!recipientEmail.trim() || !recipientName.trim()) return;
+    requestMutation.mutate({
+      recipientEmail: recipientEmail.trim(),
+      recipientName: recipientName.trim(),
+      message: requestMessage.trim() || undefined,
+    });
+  };
+
+  const handleDownloadPdf = () => {
+    if (!signedData) return;
+    generateSignedPdf(docTitle, summary, signedData.signatureData, signedData.signerName, signedData.signedAt);
+  };
+
+  const statusConfig: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof CheckCircle; label: string }> = {
+    pending: { variant: "outline", icon: Clock, label: "Pending" },
+    viewed: { variant: "secondary", icon: Info, label: "Viewed" },
+    signed: { variant: "default", icon: CheckCircle, label: "Signed" },
+    declined: { variant: "destructive", icon: Ban, label: "Declined" },
+  };
+
+  return (
+    <div className="space-y-6">
+      {signedData && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-5 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 space-y-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <Badge variant="default" className="bg-green-600" data-testid="badge-document-signed">
+                Document Signed
+              </Badge>
+            </div>
+            <div className="flex items-center gap-4 flex-wrap">
+              {signedData.signatureData && (
+                <div className="border rounded-md bg-white p-2" data-testid="img-signature-preview">
+                  <img src={signedData.signatureData} alt="Signature" className="max-h-[80px] object-contain" />
+                </div>
+              )}
+              <div className="space-y-1">
+                <p className="text-sm font-medium" data-testid="text-signer-name">{signedData.signerName}</p>
+                <p className="text-xs text-muted-foreground" data-testid="text-signed-timestamp">{signedData.signedAt}</p>
+              </div>
+            </div>
+            {signedData.signatureData && (
+              <Button onClick={handleDownloadPdf} data-testid="button-download-signed-pdf">
+                <Download className="w-4 h-4" />
+                Download Signed PDF
+              </Button>
+            )}
+          </Card>
+        </motion.div>
+      )}
+
+      <div className="flex gap-2 flex-wrap">
+        <Button onClick={() => setShowSignDialog(true)} data-testid="button-sign-document">
+          <PenTool className="w-4 h-4" />
+          Sign This Document
+        </Button>
+        <Button variant="outline" onClick={() => setShowRequestDialog(true)} data-testid="button-request-signature">
+          <Mail className="w-4 h-4" />
+          Request Signature
+        </Button>
+      </div>
+
+      <Dialog open={showSignDialog} onOpenChange={setShowSignDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Sign Document</DialogTitle>
+            <DialogDescription>Draw, type, or upload your signature to sign this document.</DialogDescription>
+          </DialogHeader>
+          <SignaturePad
+            onSave={handleSign}
+            onCancel={() => setShowSignDialog(false)}
+          />
+          {signMutation.isPending && (
+            <div className="flex items-center justify-center gap-2 py-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm text-muted-foreground">Signing...</span>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Signature</DialogTitle>
+            <DialogDescription>Send a signature request to another person.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipient-email">Recipient Email</Label>
+              <Input
+                id="recipient-email"
+                data-testid="input-recipient-email"
+                type="email"
+                placeholder="email@example.com"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="recipient-name">Recipient Name</Label>
+              <Input
+                id="recipient-name"
+                data-testid="input-recipient-name"
+                placeholder="Full name"
+                value={recipientName}
+                onChange={(e) => setRecipientName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="request-message">Message (optional)</Label>
+              <Textarea
+                id="request-message"
+                data-testid="input-request-message"
+                placeholder="Add a note for the recipient..."
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                className="resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowRequestDialog(false)} data-testid="button-cancel-request">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRequestSignature}
+                disabled={!recipientEmail.trim() || !recipientName.trim() || requestMutation.isPending}
+                data-testid="button-send-request"
+              >
+                {requestMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Send Request
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {loadingRequests ? (
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : signatureRequests.length > 0 ? (
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold">Signature Requests</h4>
+          {signatureRequests.map((req, i) => {
+            const config = statusConfig[req.status] || statusConfig.pending;
+            const StatusIcon = config.icon;
+            return (
+              <motion.div
+                key={req.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.08 }}
+              >
+                <Card className="p-4" data-testid={`card-signature-request-${i}`}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate" data-testid={`text-request-name-${i}`}>
+                          {req.recipientName}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate" data-testid={`text-request-email-${i}`}>
+                          {req.recipientEmail}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant={config.variant} data-testid={`badge-request-status-${i}`}>
+                        <StatusIcon className="w-3 h-3" />
+                        {config.label}
+                      </Badge>
+                      {req.signedAt && (
+                        <span className="text-xs text-muted-foreground" data-testid={`text-request-signed-at-${i}`}>
+                          {new Date(req.signedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AnalysisPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -610,7 +1018,7 @@ export default function AnalysisPage() {
             </section>
 
             <Tabs defaultValue="translation" className="space-y-4">
-              <TabsList className="w-full grid grid-cols-4" data-testid="tabs-analysis">
+              <TabsList className="w-full grid grid-cols-5" data-testid="tabs-analysis">
                 <TabsTrigger value="translation" data-testid="tab-translation">
                   <BookOpen className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
                   Translation
@@ -626,6 +1034,10 @@ export default function AnalysisPage() {
                 <TabsTrigger value="chat" data-testid="tab-chat">
                   <MessageSquare className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
                   Ask AI
+                </TabsTrigger>
+                <TabsTrigger value="signatures" data-testid="tab-signatures">
+                  <PenTool className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
+                  Signatures
                 </TabsTrigger>
               </TabsList>
 
@@ -675,6 +1087,16 @@ export default function AnalysisPage() {
               <TabsContent value="chat">
                 <Card className="p-5">
                   <ChatPanel documentId={doc.id} />
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="signatures">
+                <Card className="p-5">
+                  <SignaturesPanel
+                    documentId={doc.id}
+                    docTitle={doc.title}
+                    summary={analysis.summary}
+                  />
                 </Card>
               </TabsContent>
             </Tabs>

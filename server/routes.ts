@@ -1,7 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDocumentSchema, analysisSchema, insertChatMessageSchema } from "@shared/schema";
+import { insertDocumentSchema, analysisSchema, insertChatMessageSchema, insertSignatureSchema } from "@shared/schema";
+import crypto from "crypto";
 import OpenAI from "openai";
 import multer from "multer";
 import bcrypt from "bcrypt";
@@ -356,7 +357,7 @@ export async function registerRoutes(
         userId
       );
 
-      analyzeInBackground(doc.id, text.slice(0, 50000));
+      analyzeDocument(doc.id, text.slice(0, 50000));
       await trackAnalysis(req);
 
       res.json(doc);
@@ -663,6 +664,259 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Chat error:", err);
       res.status(500).json({ error: "Failed to process chat message" });
+    }
+  });
+
+  // ========== SIGNATURE ROUTES ==========
+
+  app.post("/api/signatures", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const userId = getSessionUserId(req)!;
+
+      const { name, signatureData, type } = req.body;
+      if (!name || !signatureData || !type) {
+        return res.status(400).json({ error: "name, signatureData, and type are required" });
+      }
+      if (!["draw", "type", "upload"].includes(type)) {
+        return res.status(400).json({ error: "type must be draw, type, or upload" });
+      }
+
+      const signature = await storage.createSignature({ userId, name, signatureData, type });
+      res.json(signature);
+    } catch (err) {
+      console.error("Create signature error:", err);
+      res.status(500).json({ error: "Failed to create signature" });
+    }
+  });
+
+  app.get("/api/signatures", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const userId = getSessionUserId(req)!;
+      const sigs = await storage.getSignaturesByUser(userId);
+      res.json(sigs);
+    } catch (err) {
+      console.error("Get signatures error:", err);
+      res.status(500).json({ error: "Failed to fetch signatures" });
+    }
+  });
+
+  app.delete("/api/signatures/:id", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const userId = getSessionUserId(req)!;
+      const sig = await storage.getSignatureById(req.params.id);
+      if (!sig || sig.userId !== userId) {
+        return res.status(404).json({ error: "Signature not found" });
+      }
+      await storage.deleteSignature(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Delete signature error:", err);
+      res.status(500).json({ error: "Failed to delete signature" });
+    }
+  });
+
+  app.post("/api/documents/:id/sign", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const userId = getSessionUserId(req)!;
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId, userId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const { signatureId, signatureData, signatureType, signerName } = req.body;
+      let finalSignatureId = signatureId;
+
+      if (!signatureId && signatureData && signatureType && signerName) {
+        const sig = await storage.createSignature({
+          userId,
+          name: signerName,
+          signatureData,
+          type: signatureType,
+        });
+        finalSignatureId = sig.id;
+      }
+
+      if (!finalSignatureId) {
+        return res.status(400).json({ error: "signatureId or inline signature data required" });
+      }
+
+      const user = await storage.getUserById(userId);
+      const token = crypto.randomUUID();
+      const sigRequest = await storage.createSignatureRequest({
+        documentId: req.params.id,
+        senderUserId: userId,
+        recipientEmail: user?.email || "",
+        recipientName: signerName || user?.displayName || user?.email || "Owner",
+        status: "signed",
+        token,
+        message: null,
+        signatureId: finalSignatureId,
+      });
+      await storage.updateSignatureRequest(sigRequest.id, {
+        signedAt: new Date(),
+      });
+
+      res.json({ success: true, signatureId: finalSignatureId, signatureRequestId: sigRequest.id });
+    } catch (err) {
+      console.error("Sign document error:", err);
+      res.status(500).json({ error: "Failed to sign document" });
+    }
+  });
+
+  app.post("/api/documents/:id/request-signature", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const userId = getSessionUserId(req)!;
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId, userId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const { recipientEmail, recipientName, message } = req.body;
+      if (!recipientEmail || !recipientName) {
+        return res.status(400).json({ error: "recipientEmail and recipientName are required" });
+      }
+
+      const token = crypto.randomUUID();
+      const request = await storage.createSignatureRequest({
+        documentId: req.params.id,
+        senderUserId: userId,
+        recipientEmail,
+        recipientName,
+        status: "pending",
+        token,
+        message: message || null,
+        signatureId: null,
+      });
+
+      res.json(request);
+    } catch (err) {
+      console.error("Request signature error:", err);
+      res.status(500).json({ error: "Failed to create signature request" });
+    }
+  });
+
+  app.get("/api/documents/:id/signatures", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const userId = getSessionUserId(req)!;
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId, userId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      const requests = await storage.getSignatureRequestsByDocument(req.params.id);
+      res.json(requests);
+    } catch (err) {
+      console.error("Get document signatures error:", err);
+      res.status(500).json({ error: "Failed to fetch signature requests" });
+    }
+  });
+
+  app.get("/api/sign/:token", async (req, res) => {
+    try {
+      const request = await storage.getSignatureRequestByToken(req.params.token);
+      if (!request) {
+        return res.status(404).json({ error: "Signature request not found" });
+      }
+
+      const doc = await storage.getDocumentById(request.documentId);
+      let documentTitle = "Unknown Document";
+      let documentSummary = "";
+      let senderName = "Unknown";
+
+      if (doc) {
+        documentTitle = doc.title;
+        const analysis = doc.analysis as any;
+        documentSummary = analysis?.summary || "";
+      }
+
+      const sender = await storage.getUserById(request.senderUserId);
+      if (sender) {
+        senderName = sender.displayName || sender.email;
+      }
+
+      res.json({ request, documentTitle, documentSummary, senderName });
+    } catch (err) {
+      console.error("Get sign request error:", err);
+      res.status(500).json({ error: "Failed to fetch signature request" });
+    }
+  });
+
+  app.post("/api/sign/:token", async (req, res) => {
+    try {
+      const request = await storage.getSignatureRequestByToken(req.params.token);
+      if (!request) {
+        return res.status(404).json({ error: "Signature request not found" });
+      }
+      if (request.status === "signed") {
+        return res.status(400).json({ error: "This document has already been signed" });
+      }
+      if (request.status === "declined") {
+        return res.status(400).json({ error: "This signature request was declined" });
+      }
+
+      const { signatureData, signerName, type } = req.body;
+      if (!signatureData || !signerName || !type) {
+        return res.status(400).json({ error: "signatureData, signerName, and type are required" });
+      }
+
+      const sig = await storage.createSignature({
+        userId: "public",
+        name: signerName,
+        signatureData,
+        type,
+      });
+
+      const updated = await storage.updateSignatureRequest(request.id, {
+        status: "signed",
+        signatureId: sig.id,
+        signedAt: new Date(),
+      });
+
+      res.json(updated);
+    } catch (err) {
+      console.error("Sign via token error:", err);
+      res.status(500).json({ error: "Failed to sign document" });
+    }
+  });
+
+  app.post("/api/sign/:token/decline", async (req, res) => {
+    try {
+      const request = await storage.getSignatureRequestByToken(req.params.token);
+      if (!request) {
+        return res.status(404).json({ error: "Signature request not found" });
+      }
+      if (request.status === "signed") {
+        return res.status(400).json({ error: "This document has already been signed" });
+      }
+
+      const updated = await storage.updateSignatureRequest(request.id, {
+        status: "declined",
+      });
+
+      res.json(updated);
+    } catch (err) {
+      console.error("Decline signature error:", err);
+      res.status(500).json({ error: "Failed to decline signature request" });
+    }
+  });
+
+  app.get("/api/signature-requests", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const userId = getSessionUserId(req)!;
+      const requests = await storage.getSignatureRequestsByUser(userId);
+      res.json(requests);
+    } catch (err) {
+      console.error("Get signature requests error:", err);
+      res.status(500).json({ error: "Failed to fetch signature requests" });
     }
   });
 

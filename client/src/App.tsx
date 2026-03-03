@@ -12,6 +12,8 @@ import PrivacyPolicy from "@/pages/privacy";
 import TermsOfService from "@/pages/terms";
 import AuthPage from "@/pages/auth";
 import OnboardingPage from "@/pages/onboarding";
+import LandingPage from "@/pages/landing";
+import SignRequestPage from "@/pages/sign-request";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
@@ -27,7 +29,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   }
 
   if (!user) {
-    return <Redirect to="/auth" />;
+    return <Redirect to="/landing" />;
   }
 
   if (!user.onboardingCompleted && location !== "/onboarding") {
@@ -58,6 +60,24 @@ function AuthRoute() {
   return <AuthPage />;
 }
 
+function LandingRoute() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Redirect to="/" />;
+  }
+
+  return <LandingPage />;
+}
+
 function OnboardingRoute() {
   const { user, isLoading } = useAuth();
 
@@ -70,7 +90,7 @@ function OnboardingRoute() {
   }
 
   if (!user) {
-    return <Redirect to="/auth" />;
+    return <Redirect to="/landing" />;
   }
 
   if (user.onboardingCompleted) {
@@ -83,10 +103,12 @@ function OnboardingRoute() {
 function Router() {
   return (
     <Switch>
+      <Route path="/landing" component={LandingRoute} />
       <Route path="/auth" component={AuthRoute} />
       <Route path="/onboarding" component={OnboardingRoute} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
+      <Route path="/sign/:token" component={SignRequestPage} />
       <Route path="/">
         <ProtectedRoute component={Home} />
       </Route>
