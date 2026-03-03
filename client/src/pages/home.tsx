@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -372,6 +373,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Dashboard — SignSafe | AI Contract Analysis & E-Signatures</title>
+        <meta name="description" content="Upload and analyze contracts with AI. Get plain English translations, risk flags, and sign documents electronically." />
+      </Helmet>
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">

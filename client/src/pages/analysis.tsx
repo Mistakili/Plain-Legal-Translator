@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { useLocation, useParams } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -896,6 +897,10 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{doc?.title ? `${doc.title} — Analysis | SignSafe` : "Document Analysis — SignSafe"}</title>
+        <meta name="description" content="AI-powered contract analysis with plain English translation, risk flags, and follow-up chat." />
+      </Helmet>
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">

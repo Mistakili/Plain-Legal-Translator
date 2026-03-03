@@ -33,7 +33,7 @@ SignSafe is an AI-powered legal document translator that breaks down contracts, 
 - `client/src/App.tsx` - Route configuration, AuthProvider, protected routes, landing route
 
 ## Features
-- **Landing Page**: Public marketing page inspired by vemind.click with hero, stats, feature cards, CTAs
+- **Landing Page**: Public marketing page with hero, product mockup, stats, "How It Works" 3-step flow, feature cards, capabilities grid, testimonials, CTAs
 - User accounts with email/password authentication
 - Animated 6-step onboarding flow for new users (includes AI chat demo)
 - Rate limiting: 3 free analyses per month (auto-resets monthly)
@@ -90,7 +90,16 @@ SignSafe is an AI-powered legal document translator that breaks down contracts, 
 - `POST /api/sign/:token` - Sign via token (public, no auth)
 - `POST /api/sign/:token/decline` - Decline signature request (public, no auth)
 
+## SEO
+- Per-page meta tags via `react-helmet-async` (HelmetProvider wraps App in main.tsx)
+- Every page has unique `<title>`, `<meta name="description">`, and Open Graph tags
+- JSON-LD structured data (WebApplication schema) in index.html
+- Twitter card meta tags for social sharing
+- Landing page includes canonical URL, keywords, and full OG tags
+- Schema.org structured data includes feature list and pricing info
+
 ## Dependencies
+- `react-helmet-async` - Per-page SEO meta tags
 - `multer` - File upload handling (multipart form data)
 - `pdf-parse` - PDF text extraction (loaded via dynamic import)
 - `pdf-lib` - PDF generation for signed documents

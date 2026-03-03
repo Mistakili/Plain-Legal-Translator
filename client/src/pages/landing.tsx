@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck,
@@ -12,8 +13,13 @@ import {
   Languages,
   Lock,
   ArrowRight,
+  Upload,
+  Cpu,
+  Download,
   Sun,
   Moon,
+  Star,
+  Quote,
 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
@@ -75,11 +81,70 @@ const capabilities = [
   { icon: Lock, title: "Privacy First", description: "Your documents are encrypted and never shared" },
 ];
 
+const howItWorks = [
+  {
+    step: 1,
+    icon: Upload,
+    title: "Upload Your Contract",
+    description: "Drag and drop any PDF, DOCX, or image. Or import directly from Google Drive.",
+    gradient: "from-blue-500 to-blue-600",
+  },
+  {
+    step: 2,
+    icon: Cpu,
+    title: "AI Analyzes Everything",
+    description: "In under 60 seconds, every clause is translated, risks are flagged, and key terms are highlighted.",
+    gradient: "from-purple-500 to-purple-600",
+  },
+  {
+    step: 3,
+    icon: Download,
+    title: "Understand & Sign",
+    description: "Ask follow-up questions, sign electronically, or send for signatures — all in one place.",
+    gradient: "from-green-500 to-green-600",
+  },
+];
+
+const testimonials = [
+  {
+    quote: "I almost signed a lease with a hidden auto-renewal clause. SignSafe caught it in seconds. This tool is a lifesaver.",
+    name: "Jordan M.",
+    role: "Freelance Designer",
+    rating: 5,
+  },
+  {
+    quote: "As a small business owner, I can't afford a lawyer for every contract. SignSafe gives me the confidence to sign knowing exactly what I'm agreeing to.",
+    name: "Priya K.",
+    role: "E-commerce Founder",
+    rating: 5,
+  },
+  {
+    quote: "The AI follow-up chat is what sets this apart. I asked 'what happens if I miss a payment?' and got a clear answer referencing the exact clause.",
+    name: "Marcus T.",
+    role: "Real Estate Investor",
+    rating: 5,
+  },
+];
+
 export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0f] text-gray-900 dark:text-white overflow-hidden">
+      <Helmet>
+        <title>SignSafe — Understand Any Contract Before You Sign | AI Legal Document Analysis</title>
+        <meta name="description" content="SignSafe uses AI to translate complex legal contracts into plain English. Instantly flag risky clauses, ask follow-up questions, and e-sign — all in one platform. Free to start." />
+        <meta property="og:title" content="SignSafe — Understand Any Contract Before You Sign" />
+        <meta property="og:description" content="Upload any contract, get a plain English translation with risk flags, then ask follow-up questions. AI-powered legal document analysis with built-in e-signatures." />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="SignSafe" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="SignSafe — AI Contract Analysis & E-Signatures" />
+        <meta name="twitter:description" content="Translate legal jargon to plain English. Flag risks. Sign documents. All in one place." />
+        <meta name="keywords" content="AI contract analysis, legal document translator, plain English contracts, risk detection, e-signature, contract review, legal tech" />
+        <link rel="canonical" href="https://signsafe.replit.app/" />
+      </Helmet>
+
       <header className="fixed top-0 left-0 right-0 z-[100] border-b border-gray-200/60 dark:border-white/[0.06] bg-white/80 dark:bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
           <Link href="/landing">
@@ -173,6 +238,103 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="relative py-12 sm:py-16">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <AnimatedSection>
+            <div className="relative rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] p-1 shadow-2xl shadow-blue-500/5 dark:shadow-blue-500/10">
+              <div className="rounded-xl overflow-hidden bg-white dark:bg-[#12121a] p-4 sm:p-6" data-testid="product-mockup">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                  <div className="ml-4 flex-1 h-7 rounded-lg bg-gray-100 dark:bg-white/[0.06] flex items-center px-3">
+                    <span className="text-xs text-gray-400 dark:text-white/30 font-mono">signsafe.app/analysis</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 space-y-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-semibold text-gray-700 dark:text-white/70">Employment Agreement — Analysis</span>
+                    </div>
+
+                    <div className="rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-400" />
+                        <span className="text-xs font-medium text-gray-600 dark:text-white/60">Clause 3: Compensation</span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-white/40 leading-relaxed">
+                        You'll be paid $85,000 per year, split into bi-weekly paychecks. Bonuses are discretionary — your employer can choose whether or not to give one.
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/[0.15] p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-3 h-3 text-red-500" />
+                        <span className="text-xs font-medium text-red-600 dark:text-red-400">Risk: Non-Compete Clause</span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-white/40 leading-relaxed">
+                        You cannot work for any competing company for 2 years after leaving. This is unusually long and could limit your career options.
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                        <span className="text-xs font-medium text-gray-600 dark:text-white/60">Clause 7: Termination</span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-white/40 leading-relaxed">
+                        Either party can end the agreement with 30 days written notice. If fired for cause, no severance is provided.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-500/[0.08] border border-blue-100 dark:border-blue-500/[0.15] p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-3 h-3 text-blue-500" />
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">AI Chat</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="rounded-md bg-white dark:bg-white/[0.06] p-2">
+                          <p className="text-xs text-gray-600 dark:text-white/50">"Can they really stop me from freelancing?"</p>
+                        </div>
+                        <div className="rounded-md bg-blue-100 dark:bg-blue-500/20 p-2">
+                          <p className="text-xs text-blue-700 dark:text-blue-300">Based on Clause 12, the non-compete applies to "any business in the same industry" within a 50-mile radius...</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-gray-600 dark:text-white/60">Risk Score</span>
+                        <span className="text-xs font-bold text-orange-500">Medium</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-white/10">
+                        <div className="w-3/5 h-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500" />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[10px] text-gray-400 dark:text-white/30">Low</span>
+                        <span className="text-[10px] text-gray-400 dark:text-white/30">High</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-green-50 dark:bg-green-500/[0.08] border border-green-100 dark:border-green-500/[0.15] p-3">
+                      <div className="flex items-center gap-2">
+                        <PenTool className="w-3 h-3 text-green-500" />
+                        <span className="text-xs font-semibold text-green-600 dark:text-green-400">Ready to Sign</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 dark:text-white/40 mt-1">Draw, type, or upload your signature</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
       <section className="relative py-16 sm:py-20 border-y border-gray-200/60 dark:border-white/[0.06]">
         <div className="max-w-5xl mx-auto px-5 sm:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
@@ -193,7 +355,41 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative py-24 sm:py-32">
+      <section className="relative py-24 sm:py-32" data-testid="section-how-it-works">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <AnimatedSection className="text-center mb-16 sm:mb-20">
+            <p className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">How It Works</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-how-heading">
+              Three steps to
+              <br />
+              <span className="text-gray-400 dark:text-white/40">total clarity</span>
+            </h2>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            <div className="hidden md:block absolute top-16 left-[20%] right-[20%] h-[2px] bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-green-500/20 dark:from-blue-500/10 dark:via-purple-500/10 dark:to-green-500/10" />
+
+            {howItWorks.map((item, i) => (
+              <AnimatedSection key={item.step} delay={i * 0.15}>
+                <div className="text-center space-y-5 relative" data-testid={`step-${item.step}`}>
+                  <div className="flex justify-center">
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-lg relative`}>
+                      <item.icon className="w-7 h-7 text-white" />
+                      <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-white dark:bg-[#0a0a0f] border-2 border-gray-200 dark:border-white/10 flex items-center justify-center">
+                        <span className="text-xs font-black text-gray-700 dark:text-white/80">{item.step}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-bold" data-testid={`text-step-title-${item.step}`}>{item.title}</h3>
+                  <p className="text-gray-500 dark:text-white/50 text-sm sm:text-base leading-relaxed max-w-xs mx-auto">{item.description}</p>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative py-24 sm:py-32 border-t border-gray-200/60 dark:border-white/[0.06]">
         <div className="max-w-5xl mx-auto px-5 sm:px-8">
           <AnimatedSection className="mb-16 sm:mb-20">
             <p className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">Why Switch</p>
@@ -253,6 +449,43 @@ export default function LandingPage() {
                   <div className="space-y-2">
                     <p className="font-bold text-base sm:text-lg" data-testid={`text-capability-${i}`}>{cap.title}</p>
                     <p className="text-gray-400 dark:text-white/40 text-sm leading-relaxed">{cap.description}</p>
+                  </div>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative py-24 sm:py-32 border-t border-gray-200/60 dark:border-white/[0.06]" data-testid="section-testimonials">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <AnimatedSection className="text-center mb-16">
+            <p className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">What People Say</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-testimonials-heading">
+              Trusted by people who
+              <br />
+              <span className="text-gray-400 dark:text-white/40">read before they sign</span>
+            </h2>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <AnimatedSection key={t.name} delay={i * 0.1}>
+                <div className="rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] p-6 sm:p-8 space-y-5 h-full flex flex-col" data-testid={`card-testimonial-${i}`}>
+                  <Quote className="w-8 h-8 text-blue-500/20 dark:text-blue-400/20" />
+                  <p className="text-gray-600 dark:text-white/60 text-sm sm:text-base leading-relaxed flex-1">
+                    "{t.quote}"
+                  </p>
+                  <div className="space-y-3 pt-2">
+                    <div className="flex gap-1">
+                      {Array.from({ length: t.rating }).map((_, j) => (
+                        <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm" data-testid={`text-testimonial-name-${i}`}>{t.name}</p>
+                      <p className="text-gray-400 dark:text-white/40 text-xs">{t.role}</p>
+                    </div>
                   </div>
                 </div>
               </AnimatedSection>

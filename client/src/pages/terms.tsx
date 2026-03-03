@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,6 +7,12 @@ import { Card } from "@/components/ui/card";
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Terms of Service — SignSafe | AI Contract Analysis</title>
+        <meta name="description" content="Read SignSafe's Terms of Service. Understand the rules and guidelines for using our AI-powered legal document analysis platform." />
+        <meta property="og:title" content="Terms of Service — SignSafe" />
+        <meta property="og:description" content="Terms and conditions for using SignSafe's AI contract analysis platform." />
+      </Helmet>
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
           <Link href="/">

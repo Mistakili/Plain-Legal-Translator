@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -78,6 +79,12 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Helmet>
+        <title>Sign In — SignSafe | AI Contract Analysis</title>
+        <meta name="description" content="Log in or create a free SignSafe account. Start analyzing contracts with AI in under 60 seconds." />
+        <meta property="og:title" content="Sign In — SignSafe" />
+        <meta property="og:description" content="Access your SignSafe account to analyze contracts, flag risks, and e-sign documents." />
+      </Helmet>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
