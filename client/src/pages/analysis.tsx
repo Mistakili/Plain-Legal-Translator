@@ -1023,26 +1023,27 @@ export default function AnalysisPage() {
             </section>
 
             <Tabs defaultValue="translation" className="space-y-4">
-              <TabsList className="w-full grid grid-cols-5" data-testid="tabs-analysis">
-                <TabsTrigger value="translation" data-testid="tab-translation">
-                  <BookOpen className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
-                  Translation
+              <TabsList className="w-full grid grid-cols-5 h-auto" data-testid="tabs-analysis">
+                <TabsTrigger value="translation" data-testid="tab-translation" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                  <BookOpen className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden sm:inline">Translation</span>
+                  <span className="sm:hidden">Translate</span>
                 </TabsTrigger>
-                <TabsTrigger value="risks" data-testid="tab-risks">
-                  <AlertTriangle className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
-                  Risks ({analysis.riskFlags.length})
+                <TabsTrigger value="risks" data-testid="tab-risks" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                  <AlertTriangle className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  Risks
                 </TabsTrigger>
-                <TabsTrigger value="terms" data-testid="tab-terms">
-                  <Shield className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
+                <TabsTrigger value="terms" data-testid="tab-terms" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                  <Shield className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   Terms
                 </TabsTrigger>
-                <TabsTrigger value="chat" data-testid="tab-chat">
-                  <MessageSquare className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
+                <TabsTrigger value="chat" data-testid="tab-chat" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                  <MessageSquare className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                   Ask AI
                 </TabsTrigger>
-                <TabsTrigger value="signatures" data-testid="tab-signatures">
-                  <PenTool className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
-                  Signatures
+                <TabsTrigger value="signatures" data-testid="tab-signatures" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                  <PenTool className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                  Sign
                 </TabsTrigger>
               </TabsList>
 

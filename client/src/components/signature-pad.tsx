@@ -214,7 +214,7 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
               width={600}
               height={150}
               className="w-full cursor-crosshair touch-none"
-              style={{ minWidth: 300, height: 150 }}
+              style={{ height: 150 }}
             />
           </div>
           <div className="flex justify-end">

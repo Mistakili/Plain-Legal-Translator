@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Link } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,10 @@ import {
   Moon,
   Star,
   Quote,
+  Menu,
+  X,
 } from "lucide-react";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
 
 function AnimatedSection({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -128,6 +130,7 @@ const testimonials = [
 
 export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0f] text-gray-900 dark:text-white overflow-hidden">
@@ -146,16 +149,17 @@ export default function LandingPage() {
       </Helmet>
 
       <header className="fixed top-0 left-0 right-0 z-[100] border-b border-gray-200/60 dark:border-white/[0.06] bg-white/80 dark:bg-[#0a0a0f]/80 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between">
           <Link href="/landing">
-            <div className="flex items-center gap-3 cursor-pointer" data-testid="link-landing-logo">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <ShieldCheck className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2.5 sm:gap-3 cursor-pointer" data-testid="link-landing-logo">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <span className="text-lg font-bold tracking-tight">SignSafe</span>
+              <span className="text-base sm:text-lg font-bold tracking-tight">SignSafe</span>
             </div>
           </Link>
-          <div className="flex items-center gap-3">
+
+          <div className="hidden sm:flex items-center gap-3">
             <Button
               size="icon"
               variant="ghost"
@@ -176,10 +180,56 @@ export default function LandingPage() {
               </Button>
             </Link>
           </div>
+
+          <div className="flex sm:hidden items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleTheme}
+              className="text-gray-500 dark:text-white/60"
+              data-testid="button-theme-toggle-mobile"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="text-gray-700 dark:text-white/80"
+              data-testid="button-mobile-menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
         </div>
+
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="sm:hidden overflow-hidden border-t border-gray-200/60 dark:border-white/[0.06]"
+            >
+              <div className="px-4 py-4 space-y-3 bg-white/95 dark:bg-[#0a0a0f]/95 backdrop-blur-xl">
+                <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-gray-600 dark:text-white/70" data-testid="button-sign-in-mobile">
+                    Log In
+                  </Button>
+                </Link>
+                <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>
+                  <Button className="w-full bg-gray-900 text-white dark:bg-white dark:text-black font-semibold" data-testid="button-get-started-mobile">
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      <section className="relative pt-32 pb-20 sm:pt-40 sm:pb-28 md:pt-48 md:pb-36">
+      <section className="relative pt-24 pb-14 sm:pt-40 sm:pb-28 md:pt-48 md:pb-36">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-500/10 dark:bg-blue-500/15 rounded-full blur-[120px]" />
           <div className="absolute top-1/3 left-1/4 w-[300px] h-[300px] bg-purple-500/8 dark:bg-purple-500/10 rounded-full blur-[100px]" />
@@ -199,18 +249,18 @@ export default function LandingPage() {
               transition={{ duration: 0.8, delay: 0.2, type: "spring", stiffness: 200 }}
               className="flex justify-center"
             >
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/30" data-testid="icon-hero-shield">
-                <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/30" data-testid="icon-hero-shield">
+                <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" />
               </div>
             </motion.div>
 
-            <div className="space-y-4">
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95]" data-testid="text-hero-headline">
+            <div className="space-y-3 sm:space-y-4">
+              <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95]" data-testid="text-hero-headline">
                 <span className="block">Understand Every Clause.</span>
                 <span className="block bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 dark:from-blue-400 dark:via-cyan-300 dark:to-blue-400 bg-clip-text text-transparent">Before You Sign.</span>
               </h1>
 
-              <p className="text-gray-500 dark:text-white/50 max-w-2xl mx-auto text-lg sm:text-xl md:text-2xl leading-relaxed font-light" data-testid="text-hero-subheadline">
+              <p className="text-gray-500 dark:text-white/50 max-w-2xl mx-auto text-base sm:text-xl md:text-2xl leading-relaxed font-light px-2 sm:px-0" data-testid="text-hero-subheadline">
                 AI-powered contract analysis that translates legal jargon into plain English,
                 flags risky clauses, and lets you ask follow-up questions — like having a lawyer on call.
               </p>
@@ -355,8 +405,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative py-24 sm:py-32" data-testid="section-how-it-works">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+      <section className="relative py-16 sm:py-24 md:py-32" data-testid="section-how-it-works">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8">
           <AnimatedSection className="text-center mb-16 sm:mb-20">
             <p className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">How It Works</p>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-how-heading">
@@ -389,11 +439,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative py-24 sm:py-32 border-t border-gray-200/60 dark:border-white/[0.06]">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8">
-          <AnimatedSection className="mb-16 sm:mb-20">
+      <section className="relative py-16 sm:py-24 md:py-32 border-t border-gray-200/60 dark:border-white/[0.06]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8">
+          <AnimatedSection className="mb-10 sm:mb-16 md:mb-20">
             <p className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">Why Switch</p>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-why-heading">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-why-heading">
               What your current tools
               <br />
               <span className="text-gray-400 dark:text-white/40">can't do</span>
@@ -403,7 +453,7 @@ export default function LandingPage() {
           <div className="space-y-6">
             {features.map((feature, i) => (
               <AnimatedSection key={feature.number} delay={i * 0.1}>
-                <div className="group relative rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/[0.04] transition-all duration-500 p-8 sm:p-10" data-testid={`card-feature-${feature.number}`}>
+                <div className="group relative rounded-xl sm:rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/[0.04] transition-all duration-500 p-5 sm:p-8 md:p-10" data-testid={`card-feature-${feature.number}`}>
                   <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8">
                     <div className="flex items-center sm:items-start gap-5 sm:gap-0 sm:flex-col sm:shrink-0 sm:w-16">
                       <span className={`text-3xl sm:text-4xl font-black bg-gradient-to-r ${feature.gradient} bg-clip-text text-transparent`}>
@@ -425,14 +475,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative py-24 sm:py-32 border-t border-gray-200/60 dark:border-white/[0.06]">
+      <section className="relative py-16 sm:py-24 md:py-32 border-t border-gray-200/60 dark:border-white/[0.06]">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-500/5 dark:bg-blue-500/8 rounded-full blur-[120px]" />
         </div>
-        <div className="relative max-w-5xl mx-auto px-5 sm:px-8">
-          <AnimatedSection className="mb-16">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-8">
+          <AnimatedSection className="mb-10 sm:mb-16">
             <p className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">The SignSafe Edge</p>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-edge-heading">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-edge-heading">
               Built to replace
               <br />
               <span className="text-gray-400 dark:text-white/40">manual review</span>
@@ -442,7 +492,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {capabilities.map((cap, i) => (
               <AnimatedSection key={cap.title} delay={i * 0.08}>
-                <div className="rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/[0.05] transition-all duration-300 p-6 sm:p-8 space-y-4 group" data-testid={`card-capability-${i}`}>
+                <div className="rounded-xl sm:rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] hover:bg-gray-100/50 dark:hover:bg-white/[0.05] transition-all duration-300 p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4 group" data-testid={`card-capability-${i}`}>
                   <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-gradient-to-br dark:from-blue-500/20 dark:to-blue-600/20 flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:from-blue-500/30 dark:group-hover:to-blue-600/30 transition-all">
                     <cap.icon className="w-6 h-6 text-blue-500 dark:text-blue-400" />
                   </div>
@@ -457,11 +507,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative py-24 sm:py-32 border-t border-gray-200/60 dark:border-white/[0.06]" data-testid="section-testimonials">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8">
-          <AnimatedSection className="text-center mb-16">
+      <section className="relative py-16 sm:py-24 md:py-32 border-t border-gray-200/60 dark:border-white/[0.06]" data-testid="section-testimonials">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8">
+          <AnimatedSection className="text-center mb-10 sm:mb-16">
             <p className="text-blue-500 dark:text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">What People Say</p>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-testimonials-heading">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-testimonials-heading">
               Trusted by people who
               <br />
               <span className="text-gray-400 dark:text-white/40">read before they sign</span>
@@ -494,10 +544,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative py-24 sm:py-32 border-t border-gray-200/60 dark:border-white/[0.06]">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 text-center">
-          <AnimatedSection className="space-y-8">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight" data-testid="text-cta-heading">
+      <section className="relative py-16 sm:py-24 md:py-32 border-t border-gray-200/60 dark:border-white/[0.06]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-8 text-center">
+          <AnimatedSection className="space-y-6 sm:space-y-8">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight" data-testid="text-cta-heading">
               Make The Switch
             </h2>
             <p className="text-gray-400 dark:text-white/40 text-lg sm:text-xl max-w-xl mx-auto leading-relaxed">
@@ -515,13 +565,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative py-20 sm:py-24 border-t border-gray-200/60 dark:border-white/[0.06]">
-        <div className="max-w-4xl mx-auto px-5 sm:px-8 text-center">
+      <section className="relative py-14 sm:py-20 md:py-24 border-t border-gray-200/60 dark:border-white/[0.06]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-8 text-center">
           <AnimatedSection className="space-y-4">
-            <p className="text-gray-400 dark:text-white/30 text-lg sm:text-xl font-light">
+            <p className="text-gray-400 dark:text-white/30 text-base sm:text-xl font-light">
               Still reading contracts the hard way?
             </p>
-            <p className="text-gray-500 dark:text-white/60 text-2xl sm:text-3xl font-bold">
+            <p className="text-gray-500 dark:text-white/60 text-xl sm:text-3xl font-bold">
               They weren't built for this. <span className="text-gray-900 dark:text-white">SignSafe was.</span>
             </p>
             <div className="pt-4">
@@ -535,16 +585,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-200/60 dark:border-white/[0.06] py-10">
-        <div className="max-w-5xl mx-auto px-5 sm:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+      <footer className="border-t border-gray-200/60 dark:border-white/[0.06] py-8 sm:py-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8">
+          <div className="flex flex-col items-center gap-4 sm:gap-6 sm:flex-row sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                 <ShieldCheck className="w-4 h-4 text-white" />
               </div>
               <span className="font-bold" data-testid="text-footer-logo">SignSafe</span>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400 dark:text-white/40">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-gray-400 dark:text-white/40">
               <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-white transition-colors" data-testid="link-footer-privacy">
                 Privacy Policy
               </Link>

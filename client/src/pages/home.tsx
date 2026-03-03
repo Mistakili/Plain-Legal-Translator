@@ -457,31 +457,26 @@ export default function Home() {
           <Card className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <div className="px-5 pt-5 pb-0">
-                <TabsList className="w-full grid grid-cols-5" data-testid="tabs-input-mode">
-                  <TabsTrigger value="upload" data-testid="tab-upload">
-                    <FileUp className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Upload</span>
-                    <span className="sm:hidden">Upload</span>
+                <TabsList className="w-full grid grid-cols-5 h-auto" data-testid="tabs-input-mode">
+                  <TabsTrigger value="upload" data-testid="tab-upload" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                    <FileUp className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    Upload
                   </TabsTrigger>
-                  <TabsTrigger value="drive" data-testid="tab-drive">
-                    <SiGoogledrive className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Drive</span>
-                    <span className="sm:hidden">Drive</span>
+                  <TabsTrigger value="drive" data-testid="tab-drive" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                    <SiGoogledrive className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    Drive
                   </TabsTrigger>
-                  <TabsTrigger value="scan" data-testid="tab-scan">
-                    <ScanLine className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Scan</span>
-                    <span className="sm:hidden">Scan</span>
+                  <TabsTrigger value="scan" data-testid="tab-scan" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                    <ScanLine className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    Scan
                   </TabsTrigger>
-                  <TabsTrigger value="paste" data-testid="tab-paste">
-                    <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Paste</span>
-                    <span className="sm:hidden">Paste</span>
+                  <TabsTrigger value="paste" data-testid="tab-paste" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                    <Upload className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    Paste
                   </TabsTrigger>
-                  <TabsTrigger value="samples" data-testid="tab-samples">
-                    <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Sample</span>
-                    <span className="sm:hidden">Sample</span>
+                  <TabsTrigger value="samples" data-testid="tab-samples" className="flex flex-col sm:flex-row gap-0.5 sm:gap-1.5 py-2 px-1 sm:px-3 text-[11px] sm:text-sm">
+                    <FileCheck className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    Sample
                   </TabsTrigger>
                 </TabsList>
               </div>
