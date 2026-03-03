@@ -17,6 +17,10 @@ import {
   Upload,
   Brain,
   CheckCircle,
+  Send,
+  MessagesSquare,
+  BotMessageSquare,
+  HelpCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -25,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 const STEPS = [
   { id: "welcome" },
   { id: "how-it-works" },
+  { id: "ai-chat" },
   { id: "features" },
   { id: "pricing" },
   { id: "ready" },
@@ -68,7 +73,7 @@ function WelcomeStep() {
           Welcome to PlainLegal
         </h1>
         <p className="text-lg text-muted-foreground max-w-md">
-          Your AI-powered legal translator. Understand any contract before you sign it.
+          Your AI-powered legal translator. Understand any contract, then ask it anything.
         </p>
       </motion.div>
       <motion.div
@@ -99,9 +104,9 @@ function HowItWorksStep() {
       color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
     },
     {
-      icon: CheckCircle,
-      title: "Get Clear Results",
-      description: "See risk flags, key terms, and a full translation you can actually understand.",
+      icon: MessagesSquare,
+      title: "Ask Follow-Up Questions",
+      description: "Have a conversation with AI about your document — dig into any clause or concern.",
       color: "bg-green-500/10 text-green-600 dark:text-green-400",
     },
   ];
@@ -116,7 +121,7 @@ function HowItWorksStep() {
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-onboarding-howitworks">
           How It Works
         </h2>
-        <p className="text-muted-foreground">Three simple steps to understand any legal document</p>
+        <p className="text-muted-foreground">Three steps to fully understand any legal document</p>
       </motion.div>
       <div className="grid gap-4 w-full max-w-sm">
         {steps.map((step, i) => (
@@ -146,6 +151,131 @@ function HowItWorksStep() {
   );
 }
 
+function AIChatStep() {
+  const sampleQuestions = [
+    "Can I terminate this lease early?",
+    "What happens if I miss a payment?",
+    "Is the non-compete clause enforceable?",
+    "What are my obligations under Section 4?",
+  ];
+
+  return (
+    <div className="flex flex-col items-center text-center space-y-6 px-6 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-2"
+      >
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, delay: 0.1 }}
+            className="px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold"
+          >
+            OUR #1 FEATURE
+          </motion.div>
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-onboarding-aichat">
+          Ask Your Document Anything
+        </h2>
+        <p className="text-muted-foreground max-w-sm">
+          Other tools just translate. PlainLegal lets you have a real conversation about your contract.
+        </p>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="w-full max-w-sm"
+      >
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b bg-muted/50 flex items-center gap-2">
+            <BotMessageSquare className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">AI Document Chat</span>
+          </div>
+          <div className="p-4 space-y-3">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex justify-end"
+            >
+              <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%]">
+                <p className="text-sm text-left">Can the landlord raise rent during my lease?</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.7 }}
+              className="flex justify-start"
+            >
+              <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[85%]">
+                <p className="text-sm text-left">Based on Section 3.2 of your lease, rent is fixed for the 12-month term. The landlord can only increase rent upon renewal with 60 days written notice. This is a standard and favorable clause for you.</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.0 }}
+              className="flex justify-end"
+            >
+              <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%]">
+                <p className="text-sm text-left">What if I need to break the lease?</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.3 }}
+              className="flex justify-start"
+            >
+              <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[85%]">
+                <p className="text-sm text-left">Section 7.1 requires 60 days notice plus a penalty of 2 months rent. I'd flag this as a <span className="font-semibold text-amber-600 dark:text-amber-400">medium risk</span> — you may want to negotiate this down.</p>
+              </div>
+            </motion.div>
+          </div>
+
+          <div className="px-4 pb-4">
+            <div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2.5">
+              <HelpCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-sm text-muted-foreground flex-1 text-left">Ask anything about your document...</span>
+              <Send className="w-4 h-4 text-primary shrink-0" />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5 }}
+        className="space-y-2 w-full max-w-sm"
+      >
+        <p className="text-xs font-medium text-muted-foreground">PEOPLE ALSO ASK</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {sampleQuestions.map((q, i) => (
+            <motion.div
+              key={q}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.6 + i * 0.1 }}
+              className="px-3 py-1.5 rounded-full border bg-card text-xs text-muted-foreground"
+            >
+              {q}
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function FeaturesStep() {
   const features = [
     {
@@ -157,7 +287,7 @@ function FeaturesStep() {
     {
       icon: AlertTriangle,
       title: "Risk Flags",
-      description: "Potential problems highlighted",
+      description: "Problems highlighted with severity",
       color: "bg-red-500/10 text-red-600 dark:text-red-400",
     },
     {
@@ -165,12 +295,6 @@ function FeaturesStep() {
       title: "Key Terms Defined",
       description: "Legal jargon decoded for you",
       color: "bg-green-500/10 text-green-600 dark:text-green-400",
-    },
-    {
-      icon: MessageSquare,
-      title: "AI Q&A Chat",
-      description: "Ask questions about your document",
-      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
     },
     {
       icon: ScanLine,
@@ -194,9 +318,9 @@ function FeaturesStep() {
         className="space-y-2"
       >
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-onboarding-features">
-          Powerful Features
+          Everything You Need
         </h2>
-        <p className="text-muted-foreground">Everything you need to understand legal documents</p>
+        <p className="text-muted-foreground">Powerful tools to understand any legal document</p>
       </motion.div>
       <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
         {features.map((feature, i) => (
@@ -205,7 +329,7 @@ function FeaturesStep() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 + i * 0.08, type: "spring", stiffness: 400 }}
-            className="p-4 rounded-xl border bg-card text-center space-y-2"
+            className={`p-4 rounded-xl border bg-card text-center space-y-2 ${i === features.length - 1 && features.length % 2 !== 0 ? "col-span-2 max-w-[50%] mx-auto" : ""}`}
           >
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center mx-auto ${feature.color}`}>
               <feature.icon className="w-5 h-5" />
@@ -248,6 +372,7 @@ function PricingStep() {
               "3 document analyses per month",
               "Plain English translations",
               "Risk flags & key terms",
+              "AI follow-up chat on every document",
               "Document scanning",
             ].map((item) => (
               <div key={item} className="flex items-center gap-2 text-sm">
@@ -277,7 +402,7 @@ function PricingStep() {
           <div className="space-y-2 text-left">
             {[
               "Unlimited analyses",
-              "AI Q&A chat",
+              "Unlimited AI chat conversations",
               "Multi-file upload",
               "Export & share reports",
               "Priority processing",
@@ -315,17 +440,23 @@ function ReadyStep() {
           You're All Set!
         </h2>
         <p className="text-lg text-muted-foreground max-w-md">
-          Upload your first legal document and see PlainLegal in action.
+          Upload your first document, get a plain English breakdown, then ask it anything you want.
         </p>
       </motion.div>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="flex items-center gap-2 text-sm text-muted-foreground"
+        className="space-y-3"
       >
-        <Shield className="w-4 h-4" />
-        Your documents are private and secure
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Shield className="w-4 h-4" />
+          Your documents are private and secure
+        </div>
+        <div className="flex items-center gap-2 text-sm text-primary font-medium">
+          <MessageSquare className="w-4 h-4" />
+          Ask unlimited follow-up questions on any analysis
+        </div>
       </motion.div>
     </div>
   );
@@ -399,6 +530,7 @@ export default function OnboardingPage() {
     switch (STEPS[step].id) {
       case "welcome": return <WelcomeStep />;
       case "how-it-works": return <HowItWorksStep />;
+      case "ai-chat": return <AIChatStep />;
       case "features": return <FeaturesStep />;
       case "pricing": return <PricingStep />;
       case "ready": return <ReadyStep />;

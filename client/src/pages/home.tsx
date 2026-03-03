@@ -393,11 +393,10 @@ export default function Home() {
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight" data-testid="text-hero-heading">
             Understand Any Contract
             <br />
-            <span className="text-muted-foreground">Before You Sign</span>
+            <span className="text-muted-foreground">Then Ask It Anything</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
-            Upload any legal document and get an instant plain English translation with risk analysis.
-            Powered by DigitalOcean Gradient AI, PlainLegal makes the law accessible to everyone.
+            Upload a legal document, get a plain English translation with risk flags — then have a real conversation with AI about every clause.
           </p>
         </motion.section>
 
@@ -723,7 +722,30 @@ export default function Home() {
           </Card>
         </motion.section>
 
-        <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.35 }}
+        >
+          <Card className="p-5 hover-elevate border-primary/30 bg-primary/[0.03]">
+            <div className="flex items-start gap-4">
+              <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <MessageSquare className="w-5 h-5 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-sm" data-testid="text-feature-ai-chat">AI Follow-Up Chat</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">KEY FEATURE</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  After analysis, ask unlimited follow-up questions about any clause. Get specific answers about your rights, obligations, deadlines, and risks — like having a lawyer on call.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <section className="grid sm:grid-cols-3 gap-4">
           {[
             {
               icon: FileText,
@@ -740,17 +762,12 @@ export default function Home() {
               title: "Key Terms",
               description: "Important legal terms defined clearly so you know what each clause means.",
             },
-            {
-              icon: MessageSquare,
-              title: "Ask Questions",
-              description: "Chat with AI about your document to get answers to specific questions.",
-            },
           ].map((feature, i) => (
             <motion.div
               key={feature.title}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.35 + i * 0.08 }}
+              transition={{ duration: 0.4, delay: 0.4 + i * 0.08 }}
             >
               <Card className="p-4 space-y-2.5 h-full hover-elevate">
                 <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center">
