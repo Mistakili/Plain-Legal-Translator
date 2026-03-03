@@ -12,16 +12,17 @@ PlainLegal is an AI-powered legal document translator that breaks down contracts
 
 ## Key Files
 - `shared/schema.ts` - Data models (documents + chat_messages tables, analysis schema)
-- `server/routes.ts` - API endpoints (CRUD documents, AI analysis, Q&A chat)
+- `server/routes.ts` - API endpoints (CRUD documents, AI analysis, file upload, Q&A chat)
 - `server/storage.ts` - Database operations via Drizzle ORM
-- `client/src/pages/home.tsx` - Main page with document input, sample documents, and history
+- `client/src/pages/home.tsx` - Main page with file upload, paste text, sample documents, and history
 - `client/src/pages/analysis.tsx` - Analysis view with tabs (Translation, Risks, Terms, Ask AI)
 - `client/src/components/theme-provider.tsx` - Dark mode toggle (ThemeProvider + useTheme)
 - `client/src/lib/sample-documents.ts` - 3 pre-built sample legal documents for instant demo
 - `client/src/App.tsx` - Route configuration + ThemeProvider wrapper
 
 ## Features
-- Paste legal documents or use pre-built sample documents
+- File upload (PDF, TXT, DOC, DOCX) with drag-and-drop support
+- Paste text directly or use pre-built sample documents
 - AI-powered plain English translation of each section
 - Risk flags with severity levels (low/medium/high/critical) and suggestions
 - Key legal term definitions
@@ -32,12 +33,17 @@ PlainLegal is an AI-powered legal document translator that breaks down contracts
 - Framer Motion animations throughout
 
 ## API Endpoints
-- `POST /api/documents` - Submit document for analysis
+- `POST /api/documents` - Submit document text for analysis
+- `POST /api/documents/upload` - Upload a file (PDF/TXT/DOC/DOCX) for analysis (multipart form, field: "file")
 - `GET /api/documents` - List all documents
 - `GET /api/documents/:id` - Get single document with analysis
 - `DELETE /api/documents/:id` - Delete a document (cascades to chat messages)
 - `GET /api/documents/:id/chat` - Get chat messages for a document
 - `POST /api/documents/:id/chat` - Send a chat message and get AI response
+
+## Dependencies
+- `multer` - File upload handling (multipart form data)
+- `pdf-parse` - PDF text extraction (loaded via createRequire for ESM compat)
 
 ## Environment Variables
 - `DO_GRADIENT_API_KEY` - DigitalOcean Gradient AI Model Access Key
@@ -53,3 +59,4 @@ Uses `llama3.3-70b-instruct` via DigitalOcean Gradient AI for:
 - OpenAI client must be lazy-initialized via `getOpenAI()` factory function
 - API key must be a Model Access Key (not a dop_v1_ personal token)
 - Schema uses varchar UUIDs for IDs (gen_random_uuid)
+- pdf-parse must be imported via `createRequire` due to ESM compatibility issues

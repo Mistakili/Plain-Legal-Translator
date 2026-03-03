@@ -3,6 +3,28 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDocumentSchema, analysisSchema, insertChatMessageSchema } from "@shared/schema";
 import OpenAI from "openai";
+import multer from "multer";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      "application/pdf",
+      "text/plain",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF, TXT, DOC, and DOCX files are supported"));
+    }
+  },
+});
 
 function getOpenAI() {
   return new OpenAI({
@@ -133,6 +155,94 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Create document error:", err);
       res.status(500).json({ error: "Failed to create document" });
+    }
+  });
+
+  app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      let extractedText = "";
+      if (file.mimetype === "application/pdf") {
+        try {
+          const pdfData = await pdfParse(file.buffer);
+          extractedText = pdfData.text;
+        } catch {
+          return res.status(400).json({ error: "Failed to parse PDF. The file may be corrupted or image-only." });
+        }
+      } else {
+        extractedText = file.buffer.toString("utf-8");
+      }
+
+      if (!extractedText.trim()) {
+        return res.status(400).json({ error: "No readable text found in the uploaded file." });
+      }
+
+      const title = req.body.title || file.originalname.replace(/\.[^/.]+$/, "") || "Uploaded Document";
+
+      const doc = await storage.createDocument({
+        title,
+        originalText: extractedText.trim(),
+      });
+
+      res.json(doc);
+
+      try {
+        await storage.updateDocument(doc.id, { status: "analyzing" });
+        const client = getOpenAI();
+        console.log("Starting AI analysis for uploaded document:", doc.id);
+
+        const completion = await client.chat.completions.create({
+          model: "llama3.3-70b-instruct",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: `Please analyze this legal document:\n\n${extractedText.trim()}` },
+          ],
+          temperature: 0.3,
+          max_tokens: 4096,
+        });
+
+        const content = completion.choices[0]?.message?.content;
+        if (!content) {
+          await storage.updateDocument(doc.id, { status: "error" });
+          return;
+        }
+
+        let analysis;
+        try {
+          const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          const rawAnalysis = JSON.parse(cleaned);
+          const validated = analysisSchema.safeParse(rawAnalysis);
+          if (!validated.success) {
+            console.error("AI output validation failed:", validated.error.message);
+            await storage.updateDocument(doc.id, { status: "error" });
+            return;
+          }
+          analysis = validated.data;
+        } catch {
+          await storage.updateDocument(doc.id, { status: "error" });
+          return;
+        }
+
+        await storage.updateDocument(doc.id, {
+          analysis,
+          riskLevel: analysis.overallRiskLevel,
+          status: "complete",
+        });
+        console.log("Upload analysis complete for document:", doc.id);
+      } catch (err) {
+        console.error("Upload analysis error:", err);
+        await storage.updateDocument(doc.id, { status: "error" });
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      if (err.message?.includes("Only PDF")) {
+        return res.status(400).json({ error: err.message });
+      }
+      res.status(500).json({ error: "Failed to process uploaded file" });
     }
   });
 

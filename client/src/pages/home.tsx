@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -39,6 +39,7 @@ import {
   Sparkles,
   BookOpen,
   FileCheck,
+  FileUp,
 } from "lucide-react";
 import { SiDigitalocean } from "react-icons/si";
 import { type Document } from "@shared/schema";
@@ -68,7 +69,10 @@ function StatusIcon({ status }: { status: string }) {
 export default function Home() {
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
-  const [activeTab, setActiveTab] = useState("paste");
+  const [activeTab, setActiveTab] = useState("upload");
+  const [dragOver, setDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
@@ -95,6 +99,36 @@ export default function Home() {
     },
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (title.trim()) {
+        formData.append("title", title.trim());
+      }
+      const res = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: (doc: Document) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      setSelectedFile(null);
+      setTitle("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      toast({ title: "Document uploaded", description: "Analysis is in progress. This may take a minute." });
+      navigate(`/analysis/${doc.id}`);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/documents/${id}`);
@@ -112,6 +146,37 @@ export default function Home() {
     const docTitle = title.trim() || `Document ${new Date().toLocaleDateString()}`;
     analyzeMutation.mutate({ title: docTitle, originalText: text.trim() });
   };
+
+  const handleFileUpload = () => {
+    if (!selectedFile) {
+      toast({ title: "No file selected", description: "Please select a file to upload.", variant: "destructive" });
+      return;
+    }
+    uploadMutation.mutate(selectedFile);
+  };
+
+  const handleFileSelect = useCallback((file: File) => {
+    const allowed = ["application/pdf", "text/plain", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    if (!allowed.includes(file.type)) {
+      toast({ title: "Unsupported file", description: "Please upload a PDF, TXT, DOC, or DOCX file.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Maximum file size is 10MB.", variant: "destructive" });
+      return;
+    }
+    setSelectedFile(file);
+    if (!title.trim()) {
+      setTitle(file.name.replace(/\.[^/.]+$/, ""));
+    }
+  }, [title, toast]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  }, [handleFileSelect]);
 
   const loadSample = (sample: typeof sampleDocuments[0]) => {
     setTitle(sample.title);
@@ -172,7 +237,7 @@ export default function Home() {
             <span className="text-muted-foreground">Before You Sign</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
-            Paste any legal document and get an instant plain English translation with risk analysis.
+            Upload any legal document and get an instant plain English translation with risk analysis.
             Powered by DigitalOcean Gradient AI, PlainLegal makes the law accessible to everyone.
           </p>
         </motion.section>
@@ -185,10 +250,14 @@ export default function Home() {
           <Card className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <div className="px-5 pt-5 pb-0">
-                <TabsList className="w-full grid grid-cols-2" data-testid="tabs-input-mode">
+                <TabsList className="w-full grid grid-cols-3" data-testid="tabs-input-mode">
+                  <TabsTrigger value="upload" data-testid="tab-upload">
+                    <FileUp className="w-3.5 h-3.5 mr-1.5" />
+                    Upload File
+                  </TabsTrigger>
                   <TabsTrigger value="paste" data-testid="tab-paste">
                     <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    Paste Document
+                    Paste Text
                   </TabsTrigger>
                   <TabsTrigger value="samples" data-testid="tab-samples">
                     <FileCheck className="w-3.5 h-3.5 mr-1.5" />
@@ -196,6 +265,84 @@ export default function Home() {
                   </TabsTrigger>
                 </TabsList>
               </div>
+
+              <TabsContent value="upload" className="p-5 pt-4 space-y-4">
+                <Input
+                  data-testid="input-upload-title"
+                  placeholder="Document title (optional — uses filename by default)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+                <div
+                  className={`relative border-2 border-dashed rounded-md p-8 text-center transition-colors cursor-pointer ${
+                    dragOver
+                      ? "border-primary bg-primary/5"
+                      : selectedFile
+                        ? "border-green-500 dark:border-green-400 bg-green-50 dark:bg-green-950/20"
+                        : "border-muted-foreground/25 hover:border-muted-foreground/40"
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="dropzone-upload"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.txt,.doc,.docx"
+                    className="hidden"
+                    data-testid="input-file-upload"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect(file);
+                    }}
+                  />
+                  {selectedFile ? (
+                    <div className="space-y-2">
+                      <CheckCircle className="w-10 h-10 text-green-500 dark:text-green-400 mx-auto" />
+                      <p className="text-sm font-medium">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(selectedFile.size / 1024).toFixed(1)} KB — Click or drag to replace
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto">
+                        <FileUp className="w-7 h-7 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {dragOver ? "Drop your file here" : "Drag & drop your document here"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          or click to browse — PDF, TXT, DOC, DOCX (max 10MB)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-end">
+                  <Button
+                    data-testid="button-upload-analyze"
+                    onClick={handleFileUpload}
+                    disabled={uploadMutation.isPending || !selectedFile}
+                    size="lg"
+                  >
+                    {uploadMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4" />
+                        Analyze Document
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </TabsContent>
 
               <TabsContent value="paste" className="p-5 pt-4 space-y-4">
                 <Input
