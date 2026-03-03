@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDocumentSchema } from "@shared/schema";
+import { insertDocumentSchema, analysisSchema } from "@shared/schema";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -89,7 +89,14 @@ export async function registerRoutes(
         let analysis;
         try {
           const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          analysis = JSON.parse(cleaned);
+          const rawAnalysis = JSON.parse(cleaned);
+          const validated = analysisSchema.safeParse(rawAnalysis);
+          if (!validated.success) {
+            console.error("AI output validation failed:", validated.error.message);
+            await storage.updateDocument(doc.id, { status: "error" });
+            return;
+          }
+          analysis = validated.data;
         } catch {
           await storage.updateDocument(doc.id, { status: "error" });
           return;
