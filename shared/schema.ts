@@ -1,11 +1,24 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, jsonb, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  displayName: text("display_name"),
+  isPremium: boolean("is_premium").notNull().default(false),
+  analysesUsedThisMonth: integer("analyses_used_this_month").notNull().default(0),
+  analysesResetDate: timestamp("analyses_reset_date").defaultNow().notNull(),
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 export const documents = pgTable("documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: varchar("session_id"),
+  userId: varchar("user_id"),
   title: text("title").notNull(),
   originalText: text("original_text").notNull(),
   analysis: jsonb("analysis"),
@@ -45,9 +58,19 @@ export const analysisSchema = z.object({
   documentType: z.string(),
 });
 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  isPremium: true,
+  analysesUsedThisMonth: true,
+  analysesResetDate: true,
+  onboardingCompleted: true,
+  createdAt: true,
+});
+
 export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,
   sessionId: true,
+  userId: true,
   createdAt: true,
   analysis: true,
   riskLevel: true,
@@ -59,6 +82,8 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true,
 });
 
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;
 export type Analysis = z.infer<typeof analysisSchema>;

@@ -1,9 +1,12 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDocumentSchema, analysisSchema, insertChatMessageSchema } from "@shared/schema";
 import OpenAI from "openai";
 import multer from "multer";
+import bcrypt from "bcrypt";
+import { z } from "zod";
+
 let PDFParseClass: any = null;
 async function getPDFParseClass() {
   if (!PDFParseClass) {
@@ -55,6 +58,60 @@ function getOpenAI() {
     baseURL: "https://inference.do-ai.run/v1/",
     apiKey: process.env.DO_GRADIENT_API_KEY || "",
   });
+}
+
+const FREE_ANALYSES_PER_MONTH = 3;
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  displayName: z.string().min(1, "Display name is required").max(100).optional(),
+});
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+function getSessionUserId(req: Request): string | undefined {
+  return (req.session as any).userId;
+}
+
+function setSessionUserId(req: Request, userId: string) {
+  (req.session as any).userId = userId;
+}
+
+async function checkRateLimit(req: Request, res: Response): Promise<boolean> {
+  const userId = getSessionUserId(req);
+  if (!userId) return true;
+
+  const user = await storage.checkAndResetMonthlyAnalyses(userId);
+  if (!user.isPremium && user.analysesUsedThisMonth >= FREE_ANALYSES_PER_MONTH) {
+    res.status(403).json({
+      error: "Monthly analysis limit reached",
+      message: `You've used all ${FREE_ANALYSES_PER_MONTH} free analyses this month. Upgrade to Premium for unlimited analyses.`,
+      analysesUsed: user.analysesUsedThisMonth,
+      analysesLimit: FREE_ANALYSES_PER_MONTH,
+    });
+    return false;
+  }
+  return true;
+}
+
+async function trackAnalysis(req: Request) {
+  const userId = getSessionUserId(req);
+  if (userId) {
+    await storage.incrementAnalysesUsed(userId);
+  }
+}
+
+function requireAuth(req: Request, res: Response): boolean {
+  const userId = getSessionUserId(req);
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required. Please sign in." });
+    return false;
+  }
+  return true;
 }
 
 const SYSTEM_PROMPT = `You are PlainLegal, an expert legal document analyzer. Your job is to:
@@ -116,17 +173,169 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // ========== AUTH ROUTES ==========
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const parsed = registerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const errors = parsed.error.errors.map(e => e.message).join(", ");
+        return res.status(400).json({ error: errors });
+      }
+
+      const existing = await storage.getUserByEmail(parsed.data.email);
+      if (existing) {
+        return res.status(409).json({ error: "An account with this email already exists" });
+      }
+
+      const user = await storage.createUser({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        displayName: parsed.data.displayName || null,
+      });
+
+      setSessionUserId(req, user.id);
+
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (err) {
+      console.error("Registration error:", err);
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const parsed = loginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const errors = parsed.error.errors.map(e => e.message).join(", ");
+        return res.status(400).json({ error: errors });
+      }
+
+      const user = await storage.getUserByEmail(parsed.data.email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const validPassword = await bcrypt.compare(parsed.data.password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      setSessionUserId(req, user.id);
+
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (err) {
+      console.error("Login error:", err);
+      res.status(500).json({ error: "Failed to log in" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Failed to log out" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/auth/user", async (req, res) => {
+    try {
+      const userId = getSessionUserId(req);
+      if (!userId) {
+        return res.json(null);
+      }
+
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.json(null);
+      }
+
+      const freshUser = await storage.checkAndResetMonthlyAnalyses(userId);
+      const { password: _, ...safeUser } = freshUser;
+      res.json(safeUser);
+    } catch (err) {
+      console.error("Get user error:", err);
+      res.json(null);
+    }
+  });
+
+  app.patch("/api/auth/user", async (req, res) => {
+    try {
+      const userId = getSessionUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const allowedFields = ["displayName", "onboardingCompleted"];
+      const updates: any = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+
+      const updated = await storage.updateUser(userId, updates);
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password: _, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (err) {
+      console.error("Update user error:", err);
+      res.status(500).json({ error: "Failed to update account" });
+    }
+  });
+
+  app.delete("/api/auth/account", async (req, res) => {
+    try {
+      const userId = getSessionUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      await storage.deleteUser(userId);
+
+      req.session.destroy((err) => {
+        if (err) console.error("Session destroy error after account deletion:", err);
+        res.clearCookie("connect.sid");
+        res.json({ success: true });
+      });
+    } catch (err) {
+      console.error("Delete account error:", err);
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
+  // ========== DOCUMENT ROUTES ==========
+
   app.post("/api/documents", async (req, res) => {
     try {
+      if (!requireAuth(req, res)) return;
+
       const parsed = insertDocumentSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
 
+      if (!(await checkRateLimit(req, res))) return;
+
       const sessionId = req.session.id;
-      const doc = await storage.createDocument(parsed.data, sessionId);
+      const userId = getSessionUserId(req);
+      const doc = await storage.createDocument(parsed.data, sessionId, userId);
       res.json(doc);
 
+      await trackAnalysis(req);
       analyzeDocument(doc.id, parsed.data.originalText);
     } catch (err) {
       console.error("Create document error:", err);
@@ -189,12 +398,17 @@ export async function registerRoutes(
 
   app.post("/api/documents/upload", upload.array("files", 10), async (req, res) => {
     try {
+      if (!requireAuth(req, res)) return;
+
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No files uploaded" });
       }
 
+      if (!(await checkRateLimit(req, res))) return;
+
       const sessionId = req.session.id;
+      const userId = getSessionUserId(req);
       const results: any[] = [];
       const errors: string[] = [];
 
@@ -210,9 +424,10 @@ export async function registerRoutes(
           const doc = await storage.createDocument({
             title,
             originalText: extractedText.trim(),
-          }, sessionId);
+          }, sessionId, userId);
           results.push(doc);
 
+          await trackAnalysis(req);
           analyzeDocument(doc.id, extractedText.trim());
         } catch {
           errors.push(`${file.originalname}: Failed to process file`);
@@ -232,13 +447,18 @@ export async function registerRoutes(
 
   app.post("/api/documents/scan", scanUpload.array("images", 5), async (req, res) => {
     try {
+      if (!requireAuth(req, res)) return;
+
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No images uploaded" });
       }
 
+      if (!(await checkRateLimit(req, res))) return;
+
       const { createWorker } = await import("tesseract.js");
       const sessionId = req.session.id;
+      const userId = getSessionUserId(req);
       const results: any[] = [];
       const errors: string[] = [];
 
@@ -258,9 +478,10 @@ export async function registerRoutes(
           const doc = await storage.createDocument({
             title,
             originalText: extractedText,
-          }, sessionId);
+          }, sessionId, userId);
           results.push(doc);
 
+          await trackAnalysis(req);
           analyzeDocument(doc.id, extractedText);
         } catch {
           errors.push(`${file.originalname}: Failed to process image`);
@@ -281,7 +502,8 @@ export async function registerRoutes(
   app.get("/api/documents", async (req, res) => {
     try {
       const sessionId = req.session.id;
-      const docs = await storage.getDocuments(sessionId);
+      const userId = getSessionUserId(req);
+      const docs = await storage.getDocuments(sessionId, userId);
       res.json(docs);
     } catch (err) {
       console.error("Get documents error:", err);
@@ -292,7 +514,8 @@ export async function registerRoutes(
   app.get("/api/documents/:id", async (req, res) => {
     try {
       const sessionId = req.session.id;
-      const doc = await storage.getDocument(req.params.id, sessionId);
+      const userId = getSessionUserId(req);
+      const doc = await storage.getDocument(req.params.id, sessionId, userId);
       if (!doc) {
         return res.status(404).json({ error: "Document not found" });
       }
@@ -306,7 +529,8 @@ export async function registerRoutes(
   app.delete("/api/documents/:id", async (req, res) => {
     try {
       const sessionId = req.session.id;
-      await storage.deleteDocument(req.params.id, sessionId);
+      const userId = getSessionUserId(req);
+      await storage.deleteDocument(req.params.id, sessionId, userId);
       res.json({ success: true });
     } catch (err) {
       console.error("Delete document error:", err);
@@ -327,7 +551,8 @@ export async function registerRoutes(
   app.post("/api/documents/:id/chat", async (req, res) => {
     try {
       const sessionId = req.session.id;
-      const doc = await storage.getDocument(req.params.id, sessionId);
+      const userId = getSessionUserId(req);
+      const doc = await storage.getDocument(req.params.id, sessionId, userId);
       if (!doc) {
         return res.status(404).json({ error: "Document not found" });
       }

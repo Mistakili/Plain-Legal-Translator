@@ -50,6 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
 import { sampleDocuments } from "@/lib/sample-documents";
+import { useAuth } from "@/lib/auth";
 
 function RiskBadge({ level }: { level: string }) {
   const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
@@ -83,6 +84,9 @@ export default function Home() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+
+  const analysesRemaining = user ? (user.isPremium ? Infinity : Math.max(0, 3 - user.analysesUsedThisMonth)) : null;
 
   const { data: documents = [], isLoading: loadingDocs } = useQuery<Document[]>({
     queryKey: ["/api/documents"],
@@ -336,10 +340,17 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs hidden sm:inline-flex gap-1">
-              <SiDigitalocean className="w-3 h-3" />
-              Powered by Gradient AI
-            </Badge>
+            {user && analysesRemaining !== null && !user.isPremium && (
+              <Badge variant="outline" className="text-xs hidden sm:inline-flex gap-1" data-testid="badge-analyses-remaining">
+                <Zap className="w-3 h-3" />
+                {analysesRemaining}/3 analyses left
+              </Badge>
+            )}
+            {user && (
+              <span className="text-xs text-muted-foreground hidden md:inline" data-testid="text-user-display">
+                {user.displayName || user.email}
+              </span>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -348,6 +359,17 @@ export default function Home() {
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                className="text-xs"
+                data-testid="button-logout"
+              >
+                Sign Out
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -897,10 +919,14 @@ export default function Home() {
             <Scale className="w-3.5 h-3.5" />
             <span>PlainLegal — AI Legal Document Translator</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span>Built with</span>
-            <SiDigitalocean className="w-3.5 h-3.5" />
-            <span>DigitalOcean Gradient AI</span>
+          <div className="flex items-center gap-4">
+            <a href="/privacy" className="hover:underline cursor-pointer" data-testid="link-privacy">Privacy Policy</a>
+            <a href="/terms" className="hover:underline cursor-pointer" data-testid="link-terms">Terms of Service</a>
+            <div className="flex items-center gap-1.5">
+              <span>Built with</span>
+              <SiDigitalocean className="w-3.5 h-3.5" />
+              <span>DigitalOcean Gradient AI</span>
+            </div>
           </div>
         </div>
       </footer>
