@@ -43,8 +43,11 @@ import {
   X,
   Camera,
   ScanLine,
+  Cloud,
+  Search,
+  FolderOpen,
 } from "lucide-react";
-import { SiDigitalocean } from "react-icons/si";
+import { SiDigitalocean, SiGoogledrive } from "react-icons/si";
 import { type Document } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -197,6 +200,47 @@ export default function Home() {
     },
     onError: (err: Error) => {
       toast({ title: "Scan failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const [driveSearch, setDriveSearch] = useState("");
+  const [driveSearchDebounced, setDriveSearchDebounced] = useState("");
+  const [importingFileId, setImportingFileId] = useState<string | null>(null);
+
+  const { data: driveData, isLoading: loadingDrive, error: driveError } = useQuery<{
+    files: Array<{ id: string; name: string; mimeType: string; modifiedTime: string; size: string }>;
+    nextPageToken: string | null;
+  }>({
+    queryKey: ["/api/drive/files", driveSearchDebounced],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (driveSearchDebounced) params.set("q", driveSearchDebounced);
+      const res = await fetch(`/api/drive/files?${params}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to load files");
+      }
+      return res.json();
+    },
+    enabled: activeTab === "drive",
+    staleTime: 30000,
+  });
+
+  const driveImportMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      setImportingFileId(fileId);
+      const res = await apiRequest("POST", `/api/drive/import/${fileId}`);
+      return res.json();
+    },
+    onSuccess: (doc: Document) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      setImportingFileId(null);
+      toast({ title: "Document imported", description: "Imported from Google Drive. Analysis is in progress." });
+      navigate(`/analysis/${doc.id}`);
+    },
+    onError: (err: Error) => {
+      setImportingFileId(null);
+      toast({ title: "Import failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -408,25 +452,30 @@ export default function Home() {
           <Card className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <div className="px-5 pt-5 pb-0">
-                <TabsList className="w-full grid grid-cols-4" data-testid="tabs-input-mode">
+                <TabsList className="w-full grid grid-cols-5" data-testid="tabs-input-mode">
                   <TabsTrigger value="upload" data-testid="tab-upload">
                     <FileUp className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Upload File</span>
+                    <span className="hidden sm:inline">Upload</span>
                     <span className="sm:hidden">Upload</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="drive" data-testid="tab-drive">
+                    <SiGoogledrive className="w-3.5 h-3.5 mr-1.5" />
+                    <span className="hidden sm:inline">Drive</span>
+                    <span className="sm:hidden">Drive</span>
                   </TabsTrigger>
                   <TabsTrigger value="scan" data-testid="tab-scan">
                     <ScanLine className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Scan Doc</span>
+                    <span className="hidden sm:inline">Scan</span>
                     <span className="sm:hidden">Scan</span>
                   </TabsTrigger>
                   <TabsTrigger value="paste" data-testid="tab-paste">
                     <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Paste Text</span>
+                    <span className="hidden sm:inline">Paste</span>
                     <span className="sm:hidden">Paste</span>
                   </TabsTrigger>
                   <TabsTrigger value="samples" data-testid="tab-samples">
                     <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden sm:inline">Try a Sample</span>
+                    <span className="hidden sm:inline">Sample</span>
                     <span className="sm:hidden">Sample</span>
                   </TabsTrigger>
                 </TabsList>
@@ -527,6 +576,117 @@ export default function Home() {
                     )}
                   </Button>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="drive" className="p-5 pt-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      data-testid="input-drive-search"
+                      placeholder="Search your Google Drive..."
+                      value={driveSearch}
+                      onChange={(e) => {
+                        setDriveSearch(e.target.value);
+                        clearTimeout((window as any).__driveSearchTimeout);
+                        (window as any).__driveSearchTimeout = setTimeout(() => {
+                          setDriveSearchDebounced(e.target.value);
+                        }, 400);
+                      }}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+
+                {loadingDrive ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg border animate-pulse">
+                        <div className="w-8 h-8 rounded bg-muted" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3.5 bg-muted rounded w-2/3" />
+                          <div className="h-3 bg-muted rounded w-1/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : driveError ? (
+                  <div className="text-center py-8 space-y-3">
+                    <Cloud className="w-10 h-10 text-muted-foreground mx-auto" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Unable to connect to Google Drive</p>
+                      <p className="text-xs text-muted-foreground">{(driveError as Error).message}</p>
+                    </div>
+                  </div>
+                ) : driveData?.files.length === 0 ? (
+                  <div className="text-center py-8 space-y-3">
+                    <FolderOpen className="w-10 h-10 text-muted-foreground mx-auto" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">No documents found</p>
+                      <p className="text-xs text-muted-foreground">
+                        {driveSearch ? "Try a different search term" : "No PDF, DOC, or text files found in your Drive"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[320px] overflow-y-auto">
+                    {driveData?.files.map((file) => {
+                      const isImporting = importingFileId === file.id;
+                      const mimeLabels: Record<string, string> = {
+                        "application/pdf": "PDF",
+                        "text/plain": "TXT",
+                        "application/msword": "DOC",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
+                        "application/vnd.google-apps.document": "Google Doc",
+                      };
+                      return (
+                        <motion.div
+                          key={file.id}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            isImporting ? "bg-primary/5 border-primary/30" : "hover:bg-muted/50 cursor-pointer"
+                          }`}
+                          onClick={() => {
+                            if (!isImporting && !driveImportMutation.isPending) {
+                              driveImportMutation.mutate(file.id);
+                            }
+                          }}
+                          data-testid={`drive-file-${file.id}`}
+                        >
+                          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{file.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{mimeLabels[file.mimeType] || "File"}</span>
+                              <span>·</span>
+                              <span>{new Date(file.modifiedTime).toLocaleDateString()}</span>
+                              {file.size && (
+                                <>
+                                  <span>·</span>
+                                  <span>{(parseInt(file.size) / 1024).toFixed(0)} KB</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="shrink-0">
+                            {isImporting ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            ) : (
+                              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Click any file to import and analyze it. Supports PDF, DOC, DOCX, TXT, and Google Docs.
+                </p>
               </TabsContent>
 
               <TabsContent value="scan" className="p-5 pt-4 space-y-4">

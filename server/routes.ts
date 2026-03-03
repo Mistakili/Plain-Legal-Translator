@@ -6,6 +6,7 @@ import OpenAI from "openai";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import { z } from "zod";
+import { listDriveFiles, downloadDriveFile } from "./googleDrive";
 
 let PDFParseClass: any = null;
 async function getPDFParseClass() {
@@ -314,6 +315,57 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Delete account error:", err);
       res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
+  // ========== GOOGLE DRIVE ROUTES ==========
+
+  app.get("/api/drive/files", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      const query = req.query.q as string | undefined;
+      const pageToken = req.query.pageToken as string | undefined;
+      const result = await listDriveFiles(query, pageToken);
+      res.json(result);
+    } catch (err: any) {
+      console.error("Drive list error:", err.message);
+      if (err.message?.includes("not connected")) {
+        return res.status(503).json({ error: "Google Drive is not connected. Please connect your account." });
+      }
+      res.status(500).json({ error: "Failed to list Google Drive files" });
+    }
+  });
+
+  app.post("/api/drive/import/:fileId", async (req, res) => {
+    try {
+      if (!requireAuth(req, res)) return;
+      if (!(await checkRateLimit(req, res))) return;
+
+      const { fileId } = req.params;
+      const { text, name } = await downloadDriveFile(fileId);
+
+      if (!text || text.trim().length === 0) {
+        return res.status(400).json({ error: "Could not extract text from the file. The document may be empty or contain only images." });
+      }
+
+      const sessionId = req.session.id;
+      const userId = getSessionUserId(req);
+      const doc = await storage.createDocument(
+        { title: name, originalText: text.slice(0, 50000) },
+        sessionId,
+        userId
+      );
+
+      analyzeInBackground(doc.id, text.slice(0, 50000));
+      await trackAnalysis(req);
+
+      res.json(doc);
+    } catch (err: any) {
+      console.error("Drive import error:", err.message);
+      if (err.message?.includes("not connected")) {
+        return res.status(503).json({ error: "Google Drive is not connected. Please connect your account." });
+      }
+      res.status(500).json({ error: "Failed to import file from Google Drive" });
     }
   });
 
