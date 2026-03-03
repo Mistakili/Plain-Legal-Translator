@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDocumentSchema, analysisSchema } from "@shared/schema";
+import { insertDocumentSchema, analysisSchema, insertChatMessageSchema } from "@shared/schema";
 import OpenAI from "openai";
 
 function getOpenAI() {
@@ -54,6 +54,18 @@ Guidelines:
 - Be specific in risk explanations and suggestions
 - ONLY output valid JSON, no markdown, no extra text`;
 
+const QA_SYSTEM_PROMPT = `You are PlainLegal's AI assistant. You help users understand legal documents by answering their questions in simple, plain English.
+
+You have access to the original legal document text and its AI analysis. Use these to answer questions accurately and helpfully.
+
+Guidelines:
+- Use simple, everyday language - avoid legal jargon unless defining it
+- Be specific and reference the actual document content when answering
+- If the answer isn't in the document, say so clearly
+- Always remind users that your answers are informational, not legal advice
+- Keep responses concise but thorough
+- If asked about risks, reference the specific clauses from the document`;
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -66,7 +78,6 @@ export async function registerRoutes(
       }
 
       const doc = await storage.createDocument(parsed.data);
-
       res.json(doc);
 
       try {
@@ -87,6 +98,7 @@ export async function registerRoutes(
 
         const content = completion.choices[0]?.message?.content;
         if (!content) {
+          console.error("No content in AI response for document:", doc.id);
           await storage.updateDocument(doc.id, { status: "error" });
           return;
         }
@@ -103,6 +115,7 @@ export async function registerRoutes(
           }
           analysis = validated.data;
         } catch {
+          console.error("Failed to parse AI JSON response for document:", doc.id);
           await storage.updateDocument(doc.id, { status: "error" });
           return;
         }
@@ -112,6 +125,7 @@ export async function registerRoutes(
           riskLevel: analysis.overallRiskLevel,
           status: "complete",
         });
+        console.log("Analysis complete for document:", doc.id, "Risk:", analysis.overallRiskLevel);
       } catch (err) {
         console.error("Analysis error:", err);
         await storage.updateDocument(doc.id, { status: "error" });
@@ -152,6 +166,80 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Delete document error:", err);
       res.status(500).json({ error: "Failed to delete document" });
+    }
+  });
+
+  app.get("/api/documents/:id/chat", async (req, res) => {
+    try {
+      const messages = await storage.getChatMessages(req.params.id);
+      res.json(messages);
+    } catch (err) {
+      console.error("Get chat messages error:", err);
+      res.status(500).json({ error: "Failed to fetch chat messages" });
+    }
+  });
+
+  app.post("/api/documents/:id/chat", async (req, res) => {
+    try {
+      const doc = await storage.getDocument(req.params.id);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const { content } = req.body;
+      if (!content || typeof content !== "string" || content.trim().length === 0) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+      if (content.length > 2000) {
+        return res.status(400).json({ error: "Message is too long. Please keep it under 2000 characters." });
+      }
+
+      await storage.createChatMessage({
+        documentId: doc.id,
+        role: "user",
+        content: content.trim(),
+      });
+
+      const chatHistory = await storage.getChatMessages(doc.id);
+      const recentHistory = chatHistory.slice(-20);
+
+      const analysisContext = doc.analysis
+        ? `\n\nDocument Analysis Summary:\n${JSON.stringify(doc.analysis, null, 2).slice(0, 3000)}`
+        : "";
+
+      const docText = doc.originalText.length > 6000
+        ? doc.originalText.slice(0, 6000) + "\n...[document truncated for context length]"
+        : doc.originalText;
+
+      const client = getOpenAI();
+      const completion = await client.chat.completions.create({
+        model: "llama3.3-70b-instruct",
+        messages: [
+          {
+            role: "system",
+            content: `${QA_SYSTEM_PROMPT}\n\nOriginal Document:\n${docText}${analysisContext}`,
+          },
+          ...recentHistory.map((msg) => ({
+            role: msg.role as "user" | "assistant",
+            content: msg.content,
+          })),
+        ],
+        temperature: 0.4,
+        max_tokens: 1024,
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response. Please try again.";
+
+      const assistantMsg = await storage.createChatMessage({
+        documentId: doc.id,
+        role: "assistant",
+        content: aiResponse,
+      });
+
+      res.json(assistantMsg);
+    } catch (err) {
+      console.error("Chat error:", err);
+      res.status(500).json({ error: "Failed to process chat message" });
     }
   });
 
