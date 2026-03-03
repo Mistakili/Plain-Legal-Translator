@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
-  Scale,
+  ShieldCheck,
   FileText,
   Shield,
   AlertTriangle,
@@ -61,7 +61,7 @@ function WelcomeStep() {
         transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
         className="w-24 h-24 rounded-2xl bg-primary flex items-center justify-center shadow-lg"
       >
-        <Scale className="w-12 h-12 text-primary-foreground" />
+        <ShieldCheck className="w-12 h-12 text-primary-foreground" />
       </motion.div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -70,10 +70,10 @@ function WelcomeStep() {
         className="space-y-3"
       >
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight" data-testid="text-onboarding-welcome">
-          Welcome to PlainLegal
+          Welcome to SignSafe
         </h1>
         <p className="text-lg text-muted-foreground max-w-md">
-          Your AI-powered legal translator. Understand any contract, then ask it anything.
+          Understand any contract before you sign — then ask it anything.
         </p>
       </motion.div>
       <motion.div
@@ -180,7 +180,7 @@ function AIChatStep() {
           Ask Your Document Anything
         </h2>
         <p className="text-muted-foreground max-w-sm">
-          Other tools just translate. PlainLegal lets you have a real conversation about your contract.
+          Other tools just translate. SignSafe lets you have a real conversation about your contract.
         </p>
       </motion.div>
 
@@ -440,7 +440,7 @@ function ReadyStep() {
           You're All Set!
         </h2>
         <p className="text-lg text-muted-foreground max-w-md">
-          Upload your first document, get a plain English breakdown, then ask it anything you want.
+          Upload your first document, get a plain English breakdown, then ask it anything.
         </p>
       </motion.div>
       <motion.div
@@ -543,9 +543,9 @@ export default function OnboardingPage() {
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-            <Scale className="w-4 h-4 text-primary-foreground" />
+            <ShieldCheck className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-sm">PlainLegal</span>
+          <span className="font-semibold text-sm">SignSafe</span>
         </div>
         {!isLastStep && (
           <Button

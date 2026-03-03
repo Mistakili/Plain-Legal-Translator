@@ -114,7 +114,7 @@ function requireAuth(req: Request, res: Response): boolean {
   return true;
 }
 
-const SYSTEM_PROMPT = `You are PlainLegal, an expert legal document analyzer. Your job is to:
+const SYSTEM_PROMPT = `You are SignSafe, an expert legal document analyzer. Your job is to:
 1. Translate legal language into plain, everyday English that anyone can understand
 2. Identify and flag potential risks, unfavorable terms, or clauses that need attention
 3. Define key legal terms used in the document
@@ -157,7 +157,7 @@ Guidelines:
 - Be specific in risk explanations and suggestions
 - ONLY output valid JSON, no markdown, no extra text`;
 
-const QA_SYSTEM_PROMPT = `You are PlainLegal's AI assistant. You help users understand legal documents by answering their questions in simple, plain English.
+const QA_SYSTEM_PROMPT = `You are SignSafe's AI assistant. You help users understand legal documents by answering their questions in simple, plain English.
 
 You have access to the original legal document text and its AI analysis. Use these to answer questions accurately and helpfully.
 

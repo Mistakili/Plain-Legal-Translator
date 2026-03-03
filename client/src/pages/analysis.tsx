@@ -27,7 +27,7 @@ import {
   AlertTriangle,
   BookOpen,
   Loader2,
-  Scale,
+  ShieldCheck,
   CheckCircle,
   Info,
   XCircle,
@@ -408,7 +408,7 @@ function AnalyzingState() {
         transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
         className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center"
       >
-        <Scale className="w-10 h-10 text-primary" />
+        <ShieldCheck className="w-10 h-10 text-primary" />
       </motion.div>
       <div className="space-y-2">
         <h3 className="text-xl font-semibold">Analyzing Your Document</h3>

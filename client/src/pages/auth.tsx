@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Scale, Loader2, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { ShieldCheck, Loader2, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { motion } from "framer-motion";
@@ -63,7 +63,7 @@ export default function AuthPage() {
     setRegLoading(true);
     try {
       const user = await register(regEmail.trim(), regPassword, regName.trim() || undefined);
-      toast({ title: "Account created!", description: "Welcome to PlainLegal." });
+      toast({ title: "Account created!", description: "Welcome to SignSafe." });
       if (!user.onboardingCompleted) {
         navigate("/onboarding");
       } else {
@@ -87,12 +87,12 @@ export default function AuthPage() {
         <div className="text-center space-y-3">
           <div className="flex justify-center">
             <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
-              <Scale className="w-7 h-7 text-primary-foreground" />
+              <ShieldCheck className="w-7 h-7 text-primary-foreground" />
             </div>
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-auth-title">PlainLegal</h1>
-            <p className="text-sm text-muted-foreground mt-1">AI-Powered Legal Document Translator</p>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-auth-title">SignSafe</h1>
+            <p className="text-sm text-muted-foreground mt-1">Understand Any Contract Before You Sign</p>
           </div>
         </div>
 

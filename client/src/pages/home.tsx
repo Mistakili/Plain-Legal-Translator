@@ -31,7 +31,7 @@ import {
   Loader2,
   Trash2,
   Eye,
-  Scale,
+  ShieldCheck,
   Sun,
   Moon,
   ArrowRight,
@@ -332,11 +332,11 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-              <Scale className="w-5 h-5 text-primary-foreground" />
+              <ShieldCheck className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight" data-testid="text-app-title">PlainLegal</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">AI Legal Document Translator</p>
+              <h1 className="text-lg font-semibold tracking-tight" data-testid="text-app-title">SignSafe</h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">Understand Any Contract Before You Sign</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -690,7 +690,7 @@ export default function Home() {
 
               <TabsContent value="samples" className="p-5 pt-4 space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Try PlainLegal with one of these real-world sample documents:
+                  Try SignSafe with one of these real-world sample documents:
                 </p>
                 {sampleDocuments.map((sample, i) => (
                   <motion.div
@@ -918,9 +918,9 @@ export default function Home() {
                 <BookOpen className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-sm">How PlainLegal Works</h3>
+                <h3 className="font-semibold text-sm">How SignSafe Works</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-                  PlainLegal uses DigitalOcean Gradient AI (Llama 3.3 70B) to read through your legal documents,
+                  SignSafe uses DigitalOcean Gradient AI (Llama 3.3 70B) to read through your legal documents,
                   identify each section, translate it into plain English, flag potential risks with severity levels,
                   and define complex legal terms. You can then ask follow-up questions about any part of your document.
                 </p>
@@ -933,8 +933,8 @@ export default function Home() {
       <footer className="border-t mt-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Scale className="w-3.5 h-3.5" />
-            <span>PlainLegal — AI Legal Document Translator</span>
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>SignSafe — Understand Any Contract Before You Sign</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="/privacy" className="hover:underline cursor-pointer" data-testid="link-privacy">Privacy Policy</a>

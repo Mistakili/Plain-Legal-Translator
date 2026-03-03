@@ -1,7 +1,7 @@
-# PlainLegal — AI Legal Document Translator
+# SignSafe — Understand Any Contract Before You Sign
 
 ## Overview
-PlainLegal is an AI-powered legal document translator that breaks down contracts, leases, NDAs, and other legal documents into plain English with risk flags. Originally built for the DigitalOcean Gradient AI Hackathon, now being developed as a production iOS app with premium features.
+SignSafe is an AI-powered legal document translator that breaks down contracts, leases, NDAs, and other legal documents into plain English with risk flags and interactive AI follow-up chat. Originally built for the DigitalOcean Gradient AI Hackathon (as PlainLegal), now rebranded and being developed as a production iOS app with premium features.
 
 ## Architecture
 - **Frontend**: React + TypeScript + Tailwind CSS + shadcn/ui + Framer Motion
@@ -94,3 +94,5 @@ Uses `llama3.3-70b-instruct` via DigitalOcean Gradient AI for:
 - Passwords are hashed with bcrypt (12 rounds)
 - Rate limiting uses DB counter per user, auto-resets monthly
 - Protected routes redirect to /auth, new users redirect to /onboarding
+- Rebranded from PlainLegal to SignSafe (March 2026)
+- Logo icon: ShieldCheck from lucide-react

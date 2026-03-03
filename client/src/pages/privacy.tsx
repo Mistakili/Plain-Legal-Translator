@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Scale, ArrowLeft } from "lucide-react";
+import { ShieldCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
           </Link>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-              <Scale className="w-5 h-5 text-primary-foreground" />
+              <ShieldCheck className="w-5 h-5 text-primary-foreground" />
             </div>
             <h1 className="text-lg font-semibold tracking-tight" data-testid="text-privacy-title">Privacy Policy</h1>
           </div>
@@ -29,7 +29,7 @@ export default function PrivacyPolicy() {
               Effective Date: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              PlainLegal ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.
+              SignSafe ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.
             </p>
           </div>
 
@@ -46,7 +46,7 @@ export default function PrivacyPolicy() {
           <section className="space-y-3" data-testid="section-ai-processing">
             <h2 className="text-base font-semibold">2. AI Processing & Third-Party Services</h2>
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-              <p>PlainLegal uses <span className="font-medium text-foreground">DigitalOcean Gradient AI</span> (powered by Meta Llama 3.3 70B) to analyze your legal documents. When you submit a document for analysis:</p>
+              <p>SignSafe uses <span className="font-medium text-foreground">DigitalOcean Gradient AI</span> (powered by Meta Llama 3.3 70B) to analyze your legal documents. When you submit a document for analysis:</p>
               <ul className="list-disc pl-6 space-y-1">
                 <li>Your document text is sent to DigitalOcean's AI inference API for processing.</li>
                 <li>The AI generates a plain English translation, risk analysis, key terms, and other insights.</li>
@@ -83,7 +83,7 @@ export default function PrivacyPolicy() {
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
               <p>We use the information we collect to:</p>
               <ul className="list-disc pl-6 space-y-1">
-                <li>Provide, maintain, and improve the PlainLegal service.</li>
+                <li>Provide, maintain, and improve the SignSafe service.</li>
                 <li>Process your legal documents through AI analysis.</li>
                 <li>Manage your account and authentication.</li>
                 <li>Enforce rate limits on free-tier usage.</li>
@@ -99,7 +99,7 @@ export default function PrivacyPolicy() {
               <ul className="list-disc pl-6 space-y-1">
                 <li><span className="font-medium text-foreground">AI Processing:</span> Document text is shared with DigitalOcean Gradient AI for analysis purposes.</li>
                 <li><span className="font-medium text-foreground">Legal Requirements:</span> We may disclose information if required by law, regulation, or legal process.</li>
-                <li><span className="font-medium text-foreground">Safety:</span> We may disclose information to protect the rights, safety, or property of PlainLegal, our users, or the public.</li>
+                <li><span className="font-medium text-foreground">Safety:</span> We may disclose information to protect the rights, safety, or property of SignSafe, our users, or the public.</li>
               </ul>
             </div>
           </section>
@@ -121,14 +121,14 @@ export default function PrivacyPolicy() {
           <section className="space-y-3" data-testid="section-childrens-privacy">
             <h2 className="text-base font-semibold">8. Children's Privacy</h2>
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-              <p>PlainLegal is not intended for use by children under the age of 13. We do not knowingly collect personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we will promptly delete it.</p>
+              <p>SignSafe is not intended for use by children under the age of 13. We do not knowingly collect personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we will promptly delete it.</p>
             </div>
           </section>
 
           <section className="space-y-3" data-testid="section-changes">
             <h2 className="text-base font-semibold">9. Changes to This Policy</h2>
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-              <p>We may update this Privacy Policy from time to time. We will notify you of any changes by updating the "Effective Date" at the top of this page. Your continued use of PlainLegal after changes are posted constitutes your acceptance of the updated policy.</p>
+              <p>We may update this Privacy Policy from time to time. We will notify you of any changes by updating the "Effective Date" at the top of this page. Your continued use of SignSafe after changes are posted constitutes your acceptance of the updated policy.</p>
             </div>
           </section>
 
@@ -136,7 +136,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-base font-semibold">10. Contact Us</h2>
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
               <p>If you have questions about this Privacy Policy or our data practices, please contact us at:</p>
-              <p className="font-medium text-foreground">support@plainlegal.app</p>
+              <p className="font-medium text-foreground">support@signsafe.app</p>
             </div>
           </section>
         </Card>
@@ -145,8 +145,8 @@ export default function PrivacyPolicy() {
       <footer className="border-t mt-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Scale className="w-3.5 h-3.5" />
-            <span>PlainLegal</span>
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>SignSafe</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-medium">Privacy Policy</span>
