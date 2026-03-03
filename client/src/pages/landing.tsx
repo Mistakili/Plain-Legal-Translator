@@ -142,12 +142,13 @@ export default function LandingPage() {
 
             <div className="space-y-4">
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95]" data-testid="text-hero-headline">
-                <span className="block">Just Upload It.</span>
-                <span className="block bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent">It's Understood.</span>
+                <span className="block">Understand Every Clause.</span>
+                <span className="block bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent">Before You Sign.</span>
               </h1>
 
               <p className="text-white/50 max-w-2xl mx-auto text-lg sm:text-xl md:text-2xl leading-relaxed font-light" data-testid="text-hero-subheadline">
-                The only contract tool that actually explains what you're signing. Upload, understand, sign — done.
+                AI-powered contract analysis that translates legal jargon into plain English,
+                flags risky clauses, and lets you ask follow-up questions — like having a lawyer on call.
               </p>
             </div>
 
