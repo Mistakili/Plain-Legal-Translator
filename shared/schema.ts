@@ -5,6 +5,7 @@ import { z } from "zod";
 
 export const documents = pgTable("documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id"),
   title: text("title").notNull(),
   originalText: text("original_text").notNull(),
   analysis: jsonb("analysis"),
@@ -46,6 +47,7 @@ export const analysisSchema = z.object({
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,
+  sessionId: true,
   createdAt: true,
   analysis: true,
   riskLevel: true,

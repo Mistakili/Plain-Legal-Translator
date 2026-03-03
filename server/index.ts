@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -12,6 +13,12 @@ declare module "http" {
   }
 }
 
+declare module "express-session" {
+  interface SessionData {
+    id: string;
+  }
+}
+
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -21,6 +28,20 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "plainlegal-fallback-secret",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      sameSite: "lax",
+    },
+  }),
+);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

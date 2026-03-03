@@ -104,7 +104,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: parsed.error.message });
       }
 
-      const doc = await storage.createDocument(parsed.data);
+      const sessionId = req.session.id;
+      const doc = await storage.createDocument(parsed.data, sessionId);
       res.json(doc);
 
       analyzeDocument(doc.id, parsed.data.originalText);
@@ -174,6 +175,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No files uploaded" });
       }
 
+      const sessionId = req.session.id;
       const results: any[] = [];
       const errors: string[] = [];
 
@@ -189,7 +191,7 @@ export async function registerRoutes(
           const doc = await storage.createDocument({
             title,
             originalText: extractedText.trim(),
-          });
+          }, sessionId);
           results.push(doc);
 
           analyzeDocument(doc.id, extractedText.trim());
@@ -209,9 +211,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/documents", async (_req, res) => {
+  app.get("/api/documents", async (req, res) => {
     try {
-      const docs = await storage.getDocuments();
+      const sessionId = req.session.id;
+      const docs = await storage.getDocuments(sessionId);
       res.json(docs);
     } catch (err) {
       console.error("Get documents error:", err);
@@ -221,7 +224,8 @@ export async function registerRoutes(
 
   app.get("/api/documents/:id", async (req, res) => {
     try {
-      const doc = await storage.getDocument(req.params.id);
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId);
       if (!doc) {
         return res.status(404).json({ error: "Document not found" });
       }
@@ -234,7 +238,8 @@ export async function registerRoutes(
 
   app.delete("/api/documents/:id", async (req, res) => {
     try {
-      await storage.deleteDocument(req.params.id);
+      const sessionId = req.session.id;
+      await storage.deleteDocument(req.params.id, sessionId);
       res.json({ success: true });
     } catch (err) {
       console.error("Delete document error:", err);
@@ -254,7 +259,8 @@ export async function registerRoutes(
 
   app.post("/api/documents/:id/chat", async (req, res) => {
     try {
-      const doc = await storage.getDocument(req.params.id);
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId);
       if (!doc) {
         return res.status(404).json({ error: "Document not found" });
       }
