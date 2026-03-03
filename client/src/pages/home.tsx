@@ -40,6 +40,7 @@ import {
   BookOpen,
   FileCheck,
   FileUp,
+  X,
 } from "lucide-react";
 import { SiDigitalocean } from "react-icons/si";
 import { type Document } from "@shared/schema";
@@ -299,17 +300,11 @@ export default function Home() {
               </div>
 
               <TabsContent value="upload" className="p-5 pt-4 space-y-4">
-                <Input
-                  data-testid="input-upload-title"
-                  placeholder="Document title (optional — uses filename by default)"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
                 <div
                   className={`relative border-2 border-dashed rounded-md p-8 text-center transition-colors cursor-pointer ${
                     dragOver
                       ? "border-primary bg-primary/5"
-                      : selectedFile
+                      : selectedFiles.length > 0
                         ? "border-green-500 dark:border-green-400 bg-green-50 dark:bg-green-950/20"
                         : "border-muted-foreground/25 hover:border-muted-foreground/40"
                   }`}
@@ -323,42 +318,67 @@ export default function Home() {
                     ref={fileInputRef}
                     type="file"
                     accept=".pdf,.txt,.doc,.docx"
+                    multiple
                     className="hidden"
                     data-testid="input-file-upload"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileSelect(file);
+                      if (e.target.files && e.target.files.length > 0) {
+                        validateAndAddFiles(e.target.files);
+                      }
                     }}
                   />
-                  {selectedFile ? (
-                    <div className="space-y-2">
-                      <CheckCircle className="w-10 h-10 text-green-500 dark:text-green-400 mx-auto" />
-                      <p className="text-sm font-medium">{selectedFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(selectedFile.size / 1024).toFixed(1)} KB — Click or drag to replace
+                  <div className="space-y-3">
+                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto">
+                      <FileUp className="w-7 h-7 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {dragOver ? "Drop your files here" : "Drag & drop your documents here"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        or click to browse — PDF, TXT, DOC, DOCX (max 10MB each, up to 10 files)
                       </p>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto">
-                        <FileUp className="w-7 h-7 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {dragOver ? "Drop your file here" : "Drag & drop your document here"}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          or click to browse — PDF, TXT, DOC, DOCX (max 10MB)
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
+                {selectedFiles.length > 0 && (
+                  <div className="space-y-2" data-testid="selected-files-list">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
+                    </p>
+                    <div className="space-y-1">
+                      {selectedFiles.map((file, index) => (
+                        <div
+                          key={`${file.name}-${index}`}
+                          className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2"
+                          data-testid={`selected-file-${index}`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400 shrink-0" />
+                            <span className="text-sm truncate">{file.name}</span>
+                            <span className="text-xs text-muted-foreground shrink-0">
+                              {(file.size / 1024).toFixed(0)} KB
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 shrink-0"
+                            onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                            data-testid={`button-remove-file-${index}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-end">
                   <Button
                     data-testid="button-upload-analyze"
                     onClick={handleFileUpload}
-                    disabled={uploadMutation.isPending || !selectedFile}
+                    disabled={uploadMutation.isPending || selectedFiles.length === 0}
                     size="lg"
                   >
                     {uploadMutation.isPending ? (
@@ -369,7 +389,7 @@ export default function Home() {
                     ) : (
                       <>
                         <Zap className="w-4 h-4" />
-                        Analyze Document
+                        Analyze {selectedFiles.length > 1 ? `${selectedFiles.length} Documents` : "Document"}
                       </>
                     )}
                   </Button>
