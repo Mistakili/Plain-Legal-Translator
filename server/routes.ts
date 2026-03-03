@@ -4,10 +4,12 @@ import { storage } from "./storage";
 import { insertDocumentSchema, analysisSchema } from "@shared/schema";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  baseURL: "https://inference.do-ai.run/v1/",
-  apiKey: process.env.DO_GRADIENT_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({
+    baseURL: "https://inference.do-ai.run/v1/",
+    apiKey: process.env.DO_GRADIENT_API_KEY || "",
+  });
+}
 
 const SYSTEM_PROMPT = `You are PlainLegal, an expert legal document analyzer. Your job is to:
 1. Translate legal language into plain, everyday English that anyone can understand
@@ -70,8 +72,11 @@ export async function registerRoutes(
       try {
         await storage.updateDocument(doc.id, { status: "analyzing" });
 
-        const completion = await openai.chat.completions.create({
-          model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
+        const client = getOpenAI();
+        console.log("Starting AI analysis for document:", doc.id);
+
+        const completion = await client.chat.completions.create({
+          model: "llama3.3-70b-instruct",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: `Please analyze this legal document:\n\n${parsed.data.originalText}` },
