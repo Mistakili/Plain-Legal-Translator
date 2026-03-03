@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   ShieldCheck,
   FileText,
@@ -13,20 +12,23 @@ import {
   Languages,
   Lock,
   ArrowRight,
-  Mail,
+  CheckCircle,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
+import { useTheme } from "@/components/theme-provider";
 
 function AnimatedSection({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 40 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-      transition={{ duration: 0.6, delay, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.7, delay, ease: "easeOut" }}
       className={className}
     >
       {children}
@@ -34,127 +36,136 @@ function AnimatedSection({ children, className, delay = 0 }: { children: React.R
   );
 }
 
-const stats = [
-  { value: "< 1min", label: "Analysis Time" },
-  { value: "50+", label: "Risk Patterns Detected" },
-  { value: "24/7", label: "AI Assistant" },
-  { value: "Free", label: "To Start" },
-];
-
 const features = [
   {
     number: "01",
     icon: FileText,
     title: "AI Document Analysis",
-    description: "Upload any contract and get a plain English translation of every clause, section by section.",
-    color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    description: "Stop squinting at legal jargon. Upload any contract and get a plain English breakdown of every single clause. No law degree needed.",
+    gradient: "from-blue-500 to-cyan-400",
   },
   {
     number: "02",
     icon: AlertTriangle,
     title: "Risk Flag Detection",
-    description: "Automatic identification of risky clauses with severity levels so you know exactly what to watch out for.",
-    color: "bg-red-500/10 text-red-600 dark:text-red-400",
+    description: "Hidden fees? Auto-renewal traps? Non-compete overreach? SignSafe catches what you'd miss and tells you exactly why it matters.",
+    gradient: "from-orange-500 to-red-400",
   },
   {
     number: "03",
     icon: MessageSquare,
     title: "AI Follow-Up Chat",
-    description: "Ask questions about your document and get instant, context-aware answers — like having a lawyer on call.",
-    color: "bg-green-500/10 text-green-600 dark:text-green-400",
+    description: "\"What happens if I break this clause?\" Just ask. Get instant, context-aware answers about YOUR document — like a lawyer on speed dial.",
+    gradient: "from-green-500 to-emerald-400",
   },
   {
     number: "04",
     icon: PenTool,
-    title: "E-Signatures",
-    description: "Sign documents and send for signatures right from the platform — no extra tools needed.",
-    color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    title: "E-Signatures Built In",
+    description: "Understand it, sign it, send it — all in one place. Draw, type, or upload your signature and request signatures from others.",
+    gradient: "from-purple-500 to-pink-400",
   },
 ];
 
 const capabilities = [
-  { icon: Search, title: "AI Analysis", description: "Deep clause-by-clause review" },
-  { icon: Zap, title: "Instant Results", description: "Analysis in under a minute" },
-  { icon: AlertTriangle, title: "Risk Detection", description: "Flag dangerous clauses" },
-  { icon: Languages, title: "Plain English", description: "No more legal jargon" },
-  { icon: MessageSquare, title: "Interactive Q&A", description: "Ask follow-up questions" },
-  { icon: Lock, title: "Privacy First", description: "Your documents stay private" },
+  { icon: Search, title: "AI That Gets You", description: "Deep clause-by-clause analysis powered by advanced AI" },
+  { icon: Zap, title: "Instant Results", description: "Full contract analysis in under 60 seconds" },
+  { icon: AlertTriangle, title: "Zero Missed Risks", description: "50+ risk patterns detected automatically" },
+  { icon: Languages, title: "Plain English", description: "Every clause translated to everyday language" },
+  { icon: MessageSquare, title: "Ask Anything", description: "Interactive Q&A about your specific document" },
+  { icon: Lock, title: "Privacy First", description: "Your documents are encrypted and never shared" },
 ];
 
 export default function LandingPage() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-[100]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
+      <header className="fixed top-0 left-0 right-0 z-[100] border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+          <Link href="/landing">
+            <div className="flex items-center gap-3 cursor-pointer" data-testid="link-landing-logo">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <ShieldCheck className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-lg font-bold tracking-tight">SignSafe</span>
             </div>
-            <span className="text-lg font-semibold tracking-tight" data-testid="text-landing-logo">SignSafe</span>
-          </div>
-          <div className="flex items-center gap-2">
+          </Link>
+          <div className="flex items-center gap-3">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleTheme}
+              className="text-white/60 hover:text-white hover:bg-white/10"
+              data-testid="button-theme-toggle"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
             <Link href="/auth">
-              <Button variant="ghost" data-testid="button-sign-in">Sign In</Button>
+              <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="button-sign-in">
+                Log In
+              </Button>
             </Link>
             <Link href="/auth">
-              <Button data-testid="button-get-started-nav">Get Started</Button>
+              <Button className="bg-white text-black hover:bg-white/90 font-semibold" data-testid="button-get-started-nav">
+                Get Started
+              </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/10 dark:to-transparent" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 md:py-36 text-center">
+      <section className="relative pt-32 pb-20 sm:pt-40 sm:pb-28 md:pt-48 md:pb-36">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-500/15 rounded-full blur-[120px]" />
+          <div className="absolute top-1/3 left-1/4 w-[300px] h-[300px] bg-purple-500/10 rounded-full blur-[100px]" />
+          <div className="absolute top-1/2 right-1/4 w-[250px] h-[250px] bg-cyan-500/8 rounded-full blur-[80px]" />
+        </div>
+
+        <div className="relative max-w-5xl mx-auto px-5 sm:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="space-y-6"
+            transition={{ duration: 0.8 }}
+            className="space-y-8"
           >
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, type: "spring", stiffness: 200 }}
               className="flex justify-center"
             >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary flex items-center justify-center" data-testid="icon-hero-shield">
-                <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-primary-foreground" />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/30" data-testid="icon-hero-shield">
+                <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
               </div>
             </motion.div>
 
-            <h1
-              className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight"
-              data-testid="text-hero-headline"
-            >
-              Understand Every Clause.
-              <br />
-              <span className="text-muted-foreground">Before You Sign.</span>
-            </h1>
+            <div className="space-y-4">
+              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95]" data-testid="text-hero-headline">
+                <span className="block">Just Upload It.</span>
+                <span className="block bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent">It's Understood.</span>
+              </h1>
 
-            <p
-              className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-relaxed"
-              data-testid="text-hero-subheadline"
-            >
-              AI-powered contract analysis that translates legal jargon into plain English,
-              flags risky clauses, and lets you ask follow-up questions — like having a lawyer on call.
-            </p>
+              <p className="text-white/50 max-w-2xl mx-auto text-lg sm:text-xl md:text-2xl leading-relaxed font-light" data-testid="text-hero-subheadline">
+                The only contract tool that actually explains what you're signing. Upload, understand, sign — done.
+              </p>
+            </div>
 
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2"
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
             >
               <Link href="/auth">
-                <Button size="lg" data-testid="button-hero-get-started">
+                <Button size="lg" className="bg-white text-black hover:bg-white/90 font-bold text-base px-8 h-13 rounded-xl shadow-xl shadow-white/10" data-testid="button-hero-get-started">
                   Get Started
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
               <Link href="/auth">
-                <Button size="lg" variant="outline" data-testid="button-hero-try-sample">
-                  Try a Sample
+                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 font-semibold text-base px-8 h-13 rounded-xl bg-transparent" data-testid="button-hero-try-sample">
+                  Try Demo
                 </Button>
               </Link>
             </motion.div>
@@ -162,72 +173,54 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stats.map((stat, i) => (
-            <AnimatedSection key={stat.label} delay={i * 0.1}>
-              <Card className="p-5 text-center space-y-1">
-                <p className="text-2xl sm:text-3xl font-bold text-foreground" data-testid={`text-stat-value-${i}`}>{stat.value}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground" data-testid={`text-stat-label-${i}`}>{stat.label}</p>
-              </Card>
-            </AnimatedSection>
-          ))}
-        </div>
-      </section>
-
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-        <AnimatedSection className="text-center space-y-3 mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight" data-testid="text-why-heading">
-            Why SignSafe
-          </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto text-base sm:text-lg">
-            Four powerful tools to help you navigate any legal document with confidence.
-          </p>
-        </AnimatedSection>
-
-        <div className="grid sm:grid-cols-2 gap-5">
-          {features.map((feature, i) => (
-            <AnimatedSection key={feature.number} delay={i * 0.1}>
-              <Card className="p-6 space-y-4 h-full">
-                <div className="flex items-start gap-4">
-                  <div className="flex flex-col items-center gap-2 shrink-0">
-                    <span className="text-xs font-bold text-muted-foreground">{feature.number}</span>
-                    <div className={`w-11 h-11 rounded-md flex items-center justify-center ${feature.color}`}>
-                      <feature.icon className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <h3 className="font-semibold text-base" data-testid={`text-feature-title-${feature.number}`}>{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                  </div>
+      <section className="relative py-16 sm:py-20 border-y border-white/[0.06]">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            {[
+              { value: "< 1min", label: "To analyze a contract" },
+              { value: "50+", label: "Risk patterns detected" },
+              { value: "24/7", label: "AI assistant" },
+              { value: "Free", label: "To start" },
+            ].map((stat, i) => (
+              <AnimatedSection key={stat.label} delay={i * 0.1}>
+                <div className="text-center space-y-2" data-testid={`stat-${i}`}>
+                  <p className="text-3xl sm:text-4xl md:text-5xl font-black bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">{stat.value}</p>
+                  <p className="text-white/40 text-sm sm:text-base">{stat.label}</p>
                 </div>
-              </Card>
-            </AnimatedSection>
-          ))}
+              </AnimatedSection>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="bg-muted/40 dark:bg-muted/20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
-          <AnimatedSection className="text-center space-y-3 mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight" data-testid="text-edge-heading">
-              The SignSafe Edge
+      <section className="relative py-24 sm:py-32">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <AnimatedSection className="mb-16 sm:mb-20">
+            <p className="text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">Why Switch</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-why-heading">
+              What your current tools
+              <br />
+              <span className="text-white/40">can't do</span>
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto text-base sm:text-lg">
-              Everything you need to understand and manage your contracts.
-            </p>
           </AnimatedSection>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {capabilities.map((cap, i) => (
-              <AnimatedSection key={cap.title} delay={i * 0.08}>
-                <div className="flex flex-col items-center text-center space-y-3 p-5 rounded-md">
-                  <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
-                    <cap.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-semibold text-sm" data-testid={`text-capability-${i}`}>{cap.title}</p>
-                    <p className="text-xs text-muted-foreground">{cap.description}</p>
+          <div className="space-y-6">
+            {features.map((feature, i) => (
+              <AnimatedSection key={feature.number} delay={i * 0.1}>
+                <div className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-500 p-8 sm:p-10" data-testid={`card-feature-${feature.number}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8">
+                    <div className="flex items-center sm:items-start gap-5 sm:gap-0 sm:flex-col sm:shrink-0 sm:w-16">
+                      <span className={`text-3xl sm:text-4xl font-black bg-gradient-to-r ${feature.gradient} bg-clip-text text-transparent`}>
+                        {feature.number}
+                      </span>
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center shadow-lg sm:mt-4`}>
+                        <feature.icon className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <div className="space-y-3 flex-1">
+                      <h3 className="text-xl sm:text-2xl font-bold" data-testid={`text-feature-title-${feature.number}`}>{feature.title}</h3>
+                      <p className="text-white/50 text-base sm:text-lg leading-relaxed max-w-2xl">{feature.description}</p>
+                    </div>
                   </div>
                 </div>
               </AnimatedSection>
@@ -236,46 +229,97 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        <AnimatedSection>
-          <Card className="p-8 sm:p-12 text-center space-y-6 bg-primary/5 border-primary/20">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-cta-heading">
-              Still reading contracts the hard way?
+      <section className="relative py-24 sm:py-32 border-t border-white/[0.06]">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-[120px]" />
+        </div>
+        <div className="relative max-w-5xl mx-auto px-5 sm:px-8">
+          <AnimatedSection className="mb-16">
+            <p className="text-blue-400 font-semibold text-sm uppercase tracking-widest mb-4">The SignSafe Edge</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight" data-testid="text-edge-heading">
+              Built to replace
+              <br />
+              <span className="text-white/40">manual review</span>
             </h2>
-            <p className="text-muted-foreground max-w-lg mx-auto text-base sm:text-lg">
-              Join thousands of users who understand their contracts in minutes, not hours.
+          </AnimatedSection>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+            {capabilities.map((cap, i) => (
+              <AnimatedSection key={cap.title} delay={i * 0.08}>
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-300 p-6 sm:p-8 space-y-4 group" data-testid={`card-capability-${i}`}>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center group-hover:from-blue-500/30 group-hover:to-blue-600/30 transition-all">
+                    <cap.icon className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-bold text-base sm:text-lg" data-testid={`text-capability-${i}`}>{cap.title}</p>
+                    <p className="text-white/40 text-sm leading-relaxed">{cap.description}</p>
+                  </div>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative py-24 sm:py-32 border-t border-white/[0.06]">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 text-center">
+          <AnimatedSection className="space-y-8">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight" data-testid="text-cta-heading">
+              Make The Switch
+            </h2>
+            <p className="text-white/40 text-lg sm:text-xl max-w-xl mx-auto leading-relaxed">
+              Your old contract process had its run. This is the upgrade you've been waiting for.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Link href="/auth">
-                <Button size="lg" data-testid="button-cta-switch">
-                  Make The Switch
-                  <ArrowRight className="w-4 h-4" />
+                <Button size="lg" className="bg-white text-black hover:bg-white/90 font-bold text-base px-10 h-14 rounded-xl shadow-xl shadow-white/10" data-testid="button-cta-switch">
+                  Get Started Free
+                  <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
             </div>
-          </Card>
-        </AnimatedSection>
+          </AnimatedSection>
+        </div>
       </section>
 
-      <footer className="border-t">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="text-sm font-semibold" data-testid="text-footer-logo">SignSafe</span>
+      <section className="relative py-20 sm:py-24 border-t border-white/[0.06]">
+        <div className="max-w-4xl mx-auto px-5 sm:px-8 text-center">
+          <AnimatedSection className="space-y-4">
+            <p className="text-white/30 text-lg sm:text-xl font-light">
+              Still reading contracts the hard way?
+            </p>
+            <p className="text-white/60 text-2xl sm:text-3xl font-bold">
+              They weren't built for this. <span className="text-white">SignSafe was.</span>
+            </p>
+            <div className="pt-4">
+              <Link href="/auth">
+                <Button variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 font-semibold rounded-xl bg-transparent" data-testid="button-final-cta">
+                  Switch to SignSafe
+                </Button>
+              </Link>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-              <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="link-footer-privacy">
+          </AnimatedSection>
+        </div>
+      </section>
+
+      <footer className="border-t border-white/[0.06] py-10">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-bold" data-testid="text-footer-logo">SignSafe</span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/40">
+              <Link href="/privacy" className="hover:text-white transition-colors" data-testid="link-footer-privacy">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors" data-testid="link-footer-terms">
+              <Link href="/terms" className="hover:text-white transition-colors" data-testid="link-footer-terms">
                 Terms of Service
               </Link>
-              <a href="mailto:support@signsafe.app" className="flex items-center gap-1.5 hover:text-foreground transition-colors" data-testid="link-footer-email">
-                <Mail className="w-3.5 h-3.5" />
-                support@signsafe.app
+              <a href="mailto:akinslaboratory@gmail.com" className="hover:text-white transition-colors" data-testid="link-footer-email">
+                akinslaboratory@gmail.com
               </a>
             </div>
           </div>

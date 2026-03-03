@@ -155,7 +155,7 @@ export default function TermsOfService() {
             <h2 className="text-base font-semibold">11. Contact Us</h2>
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
               <p>If you have questions about these Terms of Service, please contact us at:</p>
-              <p className="font-medium text-foreground">support@signsafe.app</p>
+              <p className="font-medium text-foreground">akinslaboratory@gmail.com</p>
             </div>
           </section>
         </Card>

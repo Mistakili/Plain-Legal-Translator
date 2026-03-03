@@ -136,7 +136,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-base font-semibold">10. Contact Us</h2>
             <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
               <p>If you have questions about this Privacy Policy or our data practices, please contact us at:</p>
-              <p className="font-medium text-foreground">support@signsafe.app</p>
+              <p className="font-medium text-foreground">akinslaboratory@gmail.com</p>
             </div>
           </section>
         </Card>

@@ -133,4 +133,4 @@ SignSafe is an AI-powered legal document translator that breaks down contracts, 
 - Rebranded from PlainLegal to SignSafe (March 2026)
 - Logo icon: ShieldCheck from lucide-react
 - Google Drive: Replit connector `connection:conn_google-drive_01KJTVRH07FEBKKT5PNTJ0BBJD`
-- Contact email: support@signsafe.app
+- Contact email: akinslaboratory@gmail.com
