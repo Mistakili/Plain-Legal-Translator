@@ -393,10 +393,10 @@ export default function Home() {
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight" data-testid="text-hero-heading">
             Understand Any Contract
             <br />
-            <span className="text-muted-foreground">Then Ask It Anything</span>
+            <span className="text-muted-foreground">Before You Sign</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
-            Upload a legal document, get a plain English translation with risk flags — then have a real conversation with AI about every clause.
+            Upload any legal document, get a plain English translation with risk flags — then ask follow-up questions about any clause, like having a lawyer on call.
           </p>
         </motion.section>
 
