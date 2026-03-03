@@ -1,38 +1,45 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { type Document, type InsertDocument, documents } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createDocument(doc: InsertDocument): Promise<Document>;
+  getDocument(id: string): Promise<Document | undefined>;
+  updateDocument(id: string, data: Partial<Document>): Promise<Document | undefined>;
+  getDocuments(): Promise<Document[]>;
+  deleteDocument(id: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
-  constructor() {
-    this.users = new Map();
+export const db = drizzle(pool);
+
+export class DatabaseStorage implements IStorage {
+  async createDocument(doc: InsertDocument): Promise<Document> {
+    const [result] = await db.insert(documents).values(doc).returning();
+    return result;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getDocument(id: string): Promise<Document | undefined> {
+    const [result] = await db.select().from(documents).where(eq(documents.id, id));
+    return result;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async updateDocument(id: string, data: Partial<Document>): Promise<Document | undefined> {
+    const [result] = await db.update(documents).set(data).where(eq(documents.id, id)).returning();
+    return result;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getDocuments(): Promise<Document[]> {
+    return db.select().from(documents).orderBy(desc(documents.createdAt));
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    await db.delete(documents).where(eq(documents.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
