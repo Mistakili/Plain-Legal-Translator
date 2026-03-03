@@ -31,6 +31,25 @@ const upload = multer({
   },
 });
 
+const scanUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const imageTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/bmp",
+      "image/tiff",
+    ];
+    if (imageTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files (JPEG, PNG, WebP, BMP, TIFF) are supported for scanning"));
+    }
+  },
+});
+
 function getOpenAI() {
   return new OpenAI({
     baseURL: "https://inference.do-ai.run/v1/",
@@ -208,6 +227,54 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("Upload error:", err);
       res.status(500).json({ error: "Failed to process uploaded files" });
+    }
+  });
+
+  app.post("/api/documents/scan", scanUpload.array("images", 5), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No images uploaded" });
+      }
+
+      const { createWorker } = await import("tesseract.js");
+      const sessionId = req.session.id;
+      const results: any[] = [];
+      const errors: string[] = [];
+
+      for (const file of files) {
+        try {
+          const worker = await createWorker("eng");
+          const { data: { text } } = await worker.recognize(file.buffer);
+          await worker.terminate();
+
+          const extractedText = text?.trim();
+          if (!extractedText) {
+            errors.push(`${file.originalname}: No readable text found in image`);
+            continue;
+          }
+
+          const title = (req.body.title?.trim()) || file.originalname.replace(/\.[^/.]+$/, "") || "Scanned Document";
+          const doc = await storage.createDocument({
+            title,
+            originalText: extractedText,
+          }, sessionId);
+          results.push(doc);
+
+          analyzeDocument(doc.id, extractedText);
+        } catch {
+          errors.push(`${file.originalname}: Failed to process image`);
+        }
+      }
+
+      if (results.length === 0) {
+        return res.status(400).json({ error: errors.join("; ") || "Failed to extract text from any images" });
+      }
+
+      res.json({ documents: results, errors });
+    } catch (err: any) {
+      console.error("Scan error:", err);
+      res.status(500).json({ error: "Failed to process scanned images" });
     }
   });
 

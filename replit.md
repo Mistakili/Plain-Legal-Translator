@@ -22,6 +22,7 @@ PlainLegal is an AI-powered legal document translator that breaks down contracts
 
 ## Features
 - File upload (PDF, TXT, DOC, DOCX) with drag-and-drop support
+- Document scanning via camera capture or image upload with OCR text extraction (Tesseract.js)
 - Paste text directly or use pre-built sample documents
 - AI-powered plain English translation of each section
 - Risk flags with severity levels (low/medium/high/critical) and suggestions
@@ -35,6 +36,7 @@ PlainLegal is an AI-powered legal document translator that breaks down contracts
 ## API Endpoints
 - `POST /api/documents` - Submit document text for analysis
 - `POST /api/documents/upload` - Upload a file (PDF/TXT/DOC/DOCX) for analysis (multipart form, field: "file")
+- `POST /api/documents/scan` - Upload images for OCR text extraction and analysis (multipart form, field: "images", up to 5 images)
 - `GET /api/documents` - List all documents
 - `GET /api/documents/:id` - Get single document with analysis
 - `DELETE /api/documents/:id` - Delete a document (cascades to chat messages)
@@ -44,6 +46,7 @@ PlainLegal is an AI-powered legal document translator that breaks down contracts
 ## Dependencies
 - `multer` - File upload handling (multipart form data)
 - `pdf-parse` - PDF text extraction (loaded via createRequire for ESM compat)
+- `tesseract.js` - OCR text extraction from images (server-side, for document scanning)
 
 ## Environment Variables
 - `DO_GRADIENT_API_KEY` - DigitalOcean Gradient AI Model Access Key

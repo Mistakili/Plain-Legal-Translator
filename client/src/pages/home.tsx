@@ -41,6 +41,8 @@ import {
   FileCheck,
   FileUp,
   X,
+  Camera,
+  ScanLine,
 } from "lucide-react";
 import { SiDigitalocean } from "react-icons/si";
 import { type Document } from "@shared/schema";
@@ -73,7 +75,11 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("upload");
   const [dragOver, setDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [scanImages, setScanImages] = useState<File[]>([]);
+  const [scanPreviews, setScanPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
@@ -148,6 +154,104 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
     },
   });
+
+  const scanMutation = useMutation({
+    mutationFn: async (images: File[]) => {
+      const formData = new FormData();
+      images.forEach((f) => formData.append("images", f));
+      const res = await fetch("/api/documents/scan", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Scan failed");
+      }
+      return res.json();
+    },
+    onSuccess: (data: { documents: Document[]; errors: string[] }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      setScanImages([]);
+      setScanPreviews([]);
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      if (imageInputRef.current) imageInputRef.current.value = "";
+      const count = data.documents.length;
+      if (data.errors.length > 0) {
+        toast({
+          title: `${count} image${count !== 1 ? "s" : ""} processed`,
+          description: `${data.errors.length} image${data.errors.length !== 1 ? "s" : ""} failed: ${data.errors.join(", ")}`,
+        });
+      } else {
+        toast({
+          title: "Document scanned",
+          description: "Text extracted and analysis is in progress.",
+        });
+      }
+      if (data.documents.length === 1) {
+        navigate(`/analysis/${data.documents[0].id}`);
+      }
+    },
+    onError: (err: Error) => {
+      toast({ title: "Scan failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const addScanImages = useCallback((files: FileList | File[]) => {
+    const imageTypes = ["image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"];
+    const validFiles: File[] = [];
+    let skipped = 0;
+
+    Array.from(files).forEach((file) => {
+      if (!imageTypes.includes(file.type)) {
+        skipped++;
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        skipped++;
+        return;
+      }
+      validFiles.push(file);
+    });
+
+    if (skipped > 0) {
+      toast({
+        title: `${skipped} file${skipped !== 1 ? "s" : ""} skipped`,
+        description: "Only image files (JPEG, PNG, WebP, BMP, TIFF) under 10MB are accepted.",
+        variant: "destructive",
+      });
+    }
+
+    if (validFiles.length > 0) {
+      const startIndex = scanImages.length;
+      const filesToAdd = validFiles.slice(0, 5 - startIndex);
+      setScanImages((prev) => [...prev, ...filesToAdd].slice(0, 5));
+      filesToAdd.forEach((file, i) => {
+        const idx = startIndex + i;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setScanPreviews((prev) => {
+            const updated = [...prev];
+            updated[idx] = e.target?.result as string;
+            return updated;
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }, [toast]);
+
+  const removeScanImage = (index: number) => {
+    setScanImages((prev) => prev.filter((_, i) => i !== index));
+    setScanPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleScanUpload = () => {
+    if (scanImages.length === 0) {
+      toast({ title: "No images", description: "Please capture or select an image first.", variant: "destructive" });
+      return;
+    }
+    scanMutation.mutate(scanImages);
+  };
 
   const handleSubmit = () => {
     if (!text.trim()) {
@@ -283,18 +387,26 @@ export default function Home() {
           <Card className="p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <div className="px-5 pt-5 pb-0">
-                <TabsList className="w-full grid grid-cols-3" data-testid="tabs-input-mode">
+                <TabsList className="w-full grid grid-cols-4" data-testid="tabs-input-mode">
                   <TabsTrigger value="upload" data-testid="tab-upload">
                     <FileUp className="w-3.5 h-3.5 mr-1.5" />
-                    Upload File
+                    <span className="hidden sm:inline">Upload File</span>
+                    <span className="sm:hidden">Upload</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="scan" data-testid="tab-scan">
+                    <ScanLine className="w-3.5 h-3.5 mr-1.5" />
+                    <span className="hidden sm:inline">Scan Doc</span>
+                    <span className="sm:hidden">Scan</span>
                   </TabsTrigger>
                   <TabsTrigger value="paste" data-testid="tab-paste">
                     <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    Paste Text
+                    <span className="hidden sm:inline">Paste Text</span>
+                    <span className="sm:hidden">Paste</span>
                   </TabsTrigger>
                   <TabsTrigger value="samples" data-testid="tab-samples">
                     <FileCheck className="w-3.5 h-3.5 mr-1.5" />
-                    Try a Sample
+                    <span className="hidden sm:inline">Try a Sample</span>
+                    <span className="sm:hidden">Sample</span>
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -390,6 +502,124 @@ export default function Home() {
                       <>
                         <Zap className="w-4 h-4" />
                         Analyze {selectedFiles.length > 1 ? `${selectedFiles.length} Documents` : "Document"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="scan" className="p-5 pt-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div
+                    className="border-2 border-dashed rounded-md p-6 text-center transition-colors cursor-pointer border-muted-foreground/25 hover:border-primary hover:bg-primary/5"
+                    onClick={() => cameraInputRef.current?.click()}
+                    data-testid="button-camera-capture"
+                  >
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      data-testid="input-camera-capture"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          addScanImages(e.target.files);
+                        }
+                      }}
+                    />
+                    <div className="space-y-2">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                        <Camera className="w-6 h-6 text-primary" />
+                      </div>
+                      <p className="text-sm font-medium">Take Photo</p>
+                      <p className="text-xs text-muted-foreground">
+                        Use your camera to capture a document
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className="border-2 border-dashed rounded-md p-6 text-center transition-colors cursor-pointer border-muted-foreground/25 hover:border-primary hover:bg-primary/5"
+                    onClick={() => imageInputRef.current?.click()}
+                    data-testid="button-image-upload"
+                  >
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+                      multiple
+                      className="hidden"
+                      data-testid="input-image-upload"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          addScanImages(e.target.files);
+                        }
+                      }}
+                    />
+                    <div className="space-y-2">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                        <FileUp className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-medium">Choose Image</p>
+                      <p className="text-xs text-muted-foreground">
+                        Select an existing photo of a document
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {scanImages.length > 0 && (
+                  <div className="space-y-3" data-testid="scan-images-list">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {scanImages.length} image{scanImages.length !== 1 ? "s" : ""} ready to scan
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {scanPreviews.map((preview, index) => (
+                        <div
+                          key={index}
+                          className="relative group rounded-md overflow-hidden border bg-muted"
+                          data-testid={`scan-preview-${index}`}
+                        >
+                          <img
+                            src={preview}
+                            alt={`Scanned page ${index + 1}`}
+                            className="w-full h-32 object-cover"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-1.5 right-1.5 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeScanImage(index)}
+                            data-testid={`button-remove-scan-${index}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1">
+                            <p className="text-xs text-white truncate">{scanImages[index]?.name}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Supports JPEG, PNG, WebP, BMP, TIFF — up to 5 images, 10MB each. For best results, ensure the document is well-lit and text is clearly visible.
+                </p>
+                <div className="flex items-center justify-end">
+                  <Button
+                    data-testid="button-scan-analyze"
+                    onClick={handleScanUpload}
+                    disabled={scanMutation.isPending || scanImages.length === 0}
+                    size="lg"
+                  >
+                    {scanMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Scanning & Extracting Text...
+                      </>
+                    ) : (
+                      <>
+                        <ScanLine className="w-4 h-4" />
+                        Scan & Analyze
                       </>
                     )}
                   </Button>
