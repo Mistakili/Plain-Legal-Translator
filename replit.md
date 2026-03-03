@@ -98,8 +98,19 @@ SignSafe is an AI-powered legal document translator that breaks down contracts, 
 - Landing page includes canonical URL, keywords, and full OG tags
 - Schema.org structured data includes feature list and pricing info
 
+## iOS App / PWA
+- **Capacitor**: Wraps the web app as a native iOS app
+  - Config: `capacitor.config.ts` (appId: com.signsafe.app)
+  - Build: `npm run build` then `npx cap sync ios` then `npx cap open ios`
+  - Guide: `IOS_BUILD_GUIDE.md` — full steps from clone to App Store submission
+- **PWA**: manifest.json, service worker (sw.js), iOS meta tags in index.html
+- **App Icons**: Generated PNGs in `client/public/icons/` (72-1024px, including App Store 1024x1024)
+- **Service Worker**: Network-first strategy with offline fallback, registered in main.tsx
+
 ## Dependencies
 - `react-helmet-async` - Per-page SEO meta tags
+- `@capacitor/core` + `@capacitor/cli` + `@capacitor/ios` - Native iOS app wrapper
+- `@capacitor/status-bar` + `@capacitor/splash-screen` - iOS native UI plugins
 - `multer` - File upload handling (multipart form data)
 - `pdf-parse` - PDF text extraction (loaded via dynamic import)
 - `pdf-lib` - PDF generation for signed documents
