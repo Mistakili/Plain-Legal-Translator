@@ -29,12 +29,10 @@ export function SignaturePanel({
   documentId,
   documentTitle,
   documentContent,
-  hasOriginalPdf,
 }: {
   documentId: string;
   documentTitle: string;
   documentContent: string;
-  hasOriginalPdf?: boolean;
 }) {
   const [signerName, setSignerName] = useState("");
   const [typedSignature, setTypedSignature] = useState("");
@@ -202,38 +200,6 @@ export function SignaturePanel({
       signatureType: signMode,
       documentId,
     });
-  };
-
-  const downloadServerPDF = async (sig: Signature) => {
-    const url = `/api/documents/${documentId}/download-signed?signatureId=${sig.id}`;
-    const response = await fetch(url, { credentials: "include" });
-    if (!response.ok) {
-      throw new Error("Failed to download signed PDF");
-    }
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    const safeTitle = documentTitle.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "-");
-    a.download = `${safeTitle}-signed.pdf`;
-    a.click();
-    URL.revokeObjectURL(blobUrl);
-  };
-
-  const handleDownloadPDF = async (sig: Signature) => {
-    try {
-      if (hasOriginalPdf) {
-        await downloadServerPDF(sig);
-      } else {
-        await generateSignedPDF(sig);
-      }
-    } catch {
-      toast({
-        title: "PDF generation failed",
-        description: "Could not generate the PDF. Please try again.",
-        variant: "destructive",
-      });
-    }
   };
 
   const scaleSignatureImage = (dataUrl: string): Promise<string> => {
@@ -419,11 +385,15 @@ export function SignaturePanel({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDownloadPDF(sig)}
+                      onClick={() => {
+                        generateSignedPDF(sig).catch(() => {
+                          toast({ title: "PDF generation failed", description: "Could not generate the PDF. Please try again.", variant: "destructive" });
+                        });
+                      }}
                       data-testid={`button-download-pdf-${i}`}
                     >
                       <FileDown className="w-3.5 h-3.5 mr-1.5" />
-                      {hasOriginalPdf ? "Download Signed PDF" : "Download PDF"}
+                      Download PDF
                     </Button>
                   </div>
                 </div>

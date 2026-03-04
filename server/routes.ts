@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { insertDocumentSchema, analysisSchema, insertChatMessageSchema } from "@shared/schema";
 import OpenAI from "openai";
 import multer from "multer";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 let PDFParseClass: any = null;
 async function getPDFParseClass() {
   if (!PDFParseClass) {
@@ -107,8 +106,7 @@ export async function registerRoutes(
 
       const sessionId = req.session.id;
       const doc = await storage.createDocument(parsed.data, sessionId);
-      const { fileData: _fd, ...docWithout } = doc;
-      res.json({ ...docWithout, hasOriginalPdf: false });
+      res.json(doc);
 
       analyzeDocument(doc.id, parsed.data.originalText);
     } catch (err) {
@@ -190,13 +188,11 @@ export async function registerRoutes(
           }
 
           const title = file.originalname.replace(/\.[^/.]+$/, "") || "Uploaded Document";
-          const fileBase64 = file.mimetype === "application/pdf" ? file.buffer.toString("base64") : null;
           const doc = await storage.createDocument({
             title,
             originalText: extractedText.trim(),
-          }, sessionId, fileBase64, file.mimetype);
-          const { fileData: _fd, ...docWithout } = doc;
-          results.push({ ...docWithout, hasOriginalPdf: !!fileBase64 });
+          }, sessionId);
+          results.push(doc);
 
           analyzeDocument(doc.id, extractedText.trim());
         } catch {
@@ -219,7 +215,7 @@ export async function registerRoutes(
     try {
       const sessionId = req.session.id;
       const docs = await storage.getDocuments(sessionId);
-      res.json(docs.map(({ fileData, ...rest }) => ({ ...rest, hasOriginalPdf: !!fileData && rest.fileType === "application/pdf" })));
+      res.json(docs);
     } catch (err) {
       console.error("Get documents error:", err);
       res.status(500).json({ error: "Failed to fetch documents" });
@@ -233,8 +229,7 @@ export async function registerRoutes(
       if (!doc) {
         return res.status(404).json({ error: "Document not found" });
       }
-      const { fileData, ...rest } = doc;
-      res.json({ ...rest, hasOriginalPdf: !!fileData && doc.fileType === "application/pdf" });
+      res.json(doc);
     } catch (err) {
       console.error("Get document error:", err);
       res.status(500).json({ error: "Failed to fetch document" });
@@ -383,223 +378,6 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Create signature error:", err);
       res.status(500).json({ error: "Failed to save signature" });
-    }
-  });
-
-  app.get("/api/documents/:id/download-signed", async (req, res) => {
-    try {
-      const sessionId = req.session.id;
-      const doc = await storage.getDocument(req.params.id, sessionId);
-      if (!doc) {
-        return res.status(404).json({ error: "Document not found" });
-      }
-
-      const signatureId = req.query.signatureId as string;
-      if (!signatureId) {
-        return res.status(400).json({ error: "signatureId query parameter is required" });
-      }
-
-      const sigs = await storage.getSignatures(req.params.id, sessionId);
-      const sig = sigs.find(s => s.id === signatureId);
-      if (!sig) {
-        return res.status(404).json({ error: "Signature not found" });
-      }
-
-      let pdfDoc: InstanceType<typeof PDFDocument>;
-
-      if (doc.fileData && doc.fileType === "application/pdf") {
-        const pdfBuffer = Buffer.from(doc.fileData, "base64");
-        pdfDoc = await PDFDocument.load(pdfBuffer);
-      } else {
-        pdfDoc = await PDFDocument.create();
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        const pageWidth = 595;
-        const pageHeight = 842;
-        const margin = 50;
-        const lineHeight = 14;
-        const fontSize = 10;
-        const contentWidth = pageWidth - margin * 2;
-
-        let page = pdfDoc.addPage([pageWidth, pageHeight]);
-        let y = pageHeight - margin;
-
-        const titleSize = 16;
-        page.drawText(doc.title, {
-          x: margin,
-          y: y,
-          size: titleSize,
-          font: boldFont,
-          color: rgb(0, 0, 0),
-        });
-        y -= titleSize + 10;
-
-        page.drawLine({
-          start: { x: margin, y },
-          end: { x: pageWidth - margin, y },
-          thickness: 0.5,
-          color: rgb(0.7, 0.7, 0.7),
-        });
-        y -= 20;
-
-        const lines = doc.originalText.split("\n");
-        for (const rawLine of lines) {
-          const words = rawLine.split(/\s+/);
-          let currentLine = "";
-          for (const word of words) {
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
-            const textWidth = font.widthOfTextAtSize(testLine, fontSize);
-            if (textWidth > contentWidth && currentLine) {
-              if (y < margin + 20) {
-                page = pdfDoc.addPage([pageWidth, pageHeight]);
-                y = pageHeight - margin;
-              }
-              page.drawText(currentLine, { x: margin, y, size: fontSize, font, color: rgb(0, 0, 0) });
-              y -= lineHeight;
-              currentLine = word;
-            } else {
-              currentLine = testLine;
-            }
-          }
-          if (currentLine) {
-            if (y < margin + 20) {
-              page = pdfDoc.addPage([pageWidth, pageHeight]);
-              y = pageHeight - margin;
-            }
-            page.drawText(currentLine, { x: margin, y, size: fontSize, font, color: rgb(0, 0, 0) });
-            y -= lineHeight;
-          } else {
-            y -= lineHeight * 0.5;
-          }
-        }
-      }
-
-      const pages = pdfDoc.getPages();
-      const lastPage = pages[pages.length - 1];
-      const { width: pw, height: ph } = lastPage.getSize();
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const italicFont = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
-      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-      let sigY = 120;
-      if (sigY > ph - 50) {
-        sigY = ph - 100;
-      }
-
-      let targetPage = lastPage;
-      if (sigY < 50) {
-        targetPage = pdfDoc.addPage([pw, ph]);
-        sigY = ph - 100;
-      }
-
-      targetPage.drawLine({
-        start: { x: 50, y: sigY + 60 },
-        end: { x: pw - 50, y: sigY + 60 },
-        thickness: 0.5,
-        color: rgb(0.7, 0.7, 0.7),
-      });
-
-      targetPage.drawText("SIGNED BY:", {
-        x: 50,
-        y: sigY + 45,
-        size: 10,
-        font: boldFont,
-        color: rgb(0, 0, 0),
-      });
-
-      targetPage.drawText(`Name: ${sig.signerName}`, {
-        x: 50,
-        y: sigY + 30,
-        size: 10,
-        font,
-        color: rgb(0, 0, 0),
-      });
-
-      targetPage.drawText(`Date: ${new Date(sig.signedAt).toLocaleDateString()}`, {
-        x: 50,
-        y: sigY + 16,
-        size: 10,
-        font,
-        color: rgb(0, 0, 0),
-      });
-
-      if (sig.signatureType === "draw" && sig.signatureData.startsWith("data:image")) {
-        try {
-          const base64Data = sig.signatureData.split(",")[1];
-          const imgBytes = Buffer.from(base64Data, "base64");
-          const pngImage = await pdfDoc.embedPng(imgBytes);
-          const imgDims = pngImage.scale(0.3);
-          const maxW = 180;
-          const maxH = 60;
-          let drawW = imgDims.width;
-          let drawH = imgDims.height;
-          if (drawW > maxW) { drawH = drawH * (maxW / drawW); drawW = maxW; }
-          if (drawH > maxH) { drawW = drawW * (maxH / drawH); drawH = maxH; }
-
-          targetPage.drawText("Signature:", {
-            x: 50,
-            y: sigY + 2,
-            size: 10,
-            font,
-            color: rgb(0, 0, 0),
-          });
-          targetPage.drawImage(pngImage, {
-            x: 50,
-            y: sigY - drawH - 5,
-            width: drawW,
-            height: drawH,
-          });
-        } catch (imgErr) {
-          console.error("Failed to embed signature image:", imgErr);
-          targetPage.drawText(`Signature: [digital signature]`, {
-            x: 50,
-            y: sigY + 2,
-            size: 10,
-            font,
-            color: rgb(0, 0, 0),
-          });
-        }
-      } else if (sig.signatureType === "type") {
-        targetPage.drawText("Signature:", {
-          x: 50,
-          y: sigY + 2,
-          size: 10,
-          font,
-          color: rgb(0, 0, 0),
-        });
-        targetPage.drawText(sig.signatureData, {
-          x: 120,
-          y: sigY,
-          size: 22,
-          font: italicFont,
-          color: rgb(0, 0, 0),
-        });
-        targetPage.drawLine({
-          start: { x: 120, y: sigY - 3 },
-          end: { x: 300, y: sigY - 3 },
-          thickness: 0.5,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-      }
-
-      targetPage.drawText("Electronically signed using PlainLegal", {
-        x: 50,
-        y: sigY - 75,
-        size: 7,
-        font,
-        color: rgb(0.5, 0.5, 0.5),
-      });
-
-      const pdfBytes = await pdfDoc.save();
-      const safeTitle = doc.title.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "-");
-
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${safeTitle}-signed.pdf"`);
-      res.setHeader("Content-Length", pdfBytes.length);
-      res.send(Buffer.from(pdfBytes));
-    } catch (err) {
-      console.error("Download signed PDF error:", err);
-      res.status(500).json({ error: "Failed to generate signed PDF" });
     }
   });
 
