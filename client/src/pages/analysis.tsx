@@ -686,7 +686,7 @@ export default function AnalysisPage() {
 
               <TabsContent value="sign">
                 <Card className="p-5">
-                  <SignaturePanel documentId={doc.id} documentTitle={doc.title} documentContent={doc.content} />
+                  <SignaturePanel documentId={doc.id} documentTitle={doc.title} documentContent={doc.content} hasOriginalPdf={!!(doc as any).hasOriginalPdf} />
                 </Card>
               </TabsContent>
             </Tabs>

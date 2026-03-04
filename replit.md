@@ -44,10 +44,13 @@ PlainLegal is an AI-powered legal document translator that breaks down contracts
 - `POST /api/documents/:id/chat` - Send a chat message and get AI response
 - `GET /api/documents/:id/signatures` - Get signatures for a document (session-scoped)
 - `POST /api/documents/:id/signatures` - Sign a document (draw or typed signature)
+- `GET /api/documents/:id/download-signed?signatureId=X` - Download the original PDF with signature overlaid (or generated PDF for text documents)
 
 ## Dependencies
 - `multer` - File upload handling (multipart form data)
-- `pdf-parse` - PDF text extraction (loaded via createRequire for ESM compat)
+- `pdf-parse` - PDF text extraction (loaded via dynamic import for CJS compat)
+- `pdf-lib` - Server-side PDF manipulation (overlay signatures on original PDFs)
+- `jspdf` - Client-side PDF generation (for text-pasted documents without original PDF)
 
 ## Environment Variables
 - `DO_GRADIENT_API_KEY` - DigitalOcean Gradient AI Model Access Key

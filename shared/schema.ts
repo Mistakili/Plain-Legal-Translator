@@ -8,6 +8,8 @@ export const documents = pgTable("documents", {
   sessionId: varchar("session_id"),
   title: text("title").notNull(),
   originalText: text("original_text").notNull(),
+  fileData: text("file_data"),
+  fileType: text("file_type"),
   analysis: jsonb("analysis"),
   riskLevel: text("risk_level"),
   status: text("status").notNull().default("pending"),
@@ -73,6 +75,8 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   analysis: true,
   riskLevel: true,
   status: true,
+  fileData: true,
+  fileType: true,
 });
 
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
