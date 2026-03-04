@@ -322,5 +322,64 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/documents/:id/signatures", async (req, res) => {
+    try {
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      const sigs = await storage.getSignatures(req.params.id, sessionId);
+      res.json(sigs);
+    } catch (err) {
+      console.error("Get signatures error:", err);
+      res.status(500).json({ error: "Failed to fetch signatures" });
+    }
+  });
+
+  app.post("/api/documents/:id/signatures", async (req, res) => {
+    try {
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const { signerName, signatureData, signatureType, documentId } = req.body;
+      if (!signerName || typeof signerName !== "string" || signerName.trim().length === 0) {
+        return res.status(400).json({ error: "Signer name is required" });
+      }
+      if (!signatureData || typeof signatureData !== "string" || signatureData.trim().length === 0) {
+        return res.status(400).json({ error: "Signature data is required" });
+      }
+      if (signatureType === "draw" && !signatureData.startsWith("data:image/png")) {
+        return res.status(400).json({ error: "Invalid signature image format" });
+      }
+      if (signatureType === "type" && signatureData.length > 200) {
+        return res.status(400).json({ error: "Typed signature is too long" });
+      }
+      if (signatureData.length > 500000) {
+        return res.status(400).json({ error: "Signature data is too large" });
+      }
+      if (signatureType !== "draw" && signatureType !== "type") {
+        return res.status(400).json({ error: "Signature type must be 'draw' or 'type'" });
+      }
+
+      const ipAddress = req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "unknown";
+
+      const sig = await storage.createSignature({
+        documentId: req.params.id,
+        signerName: signerName.trim(),
+        signatureData: signatureData.trim(),
+        signatureType,
+      }, sessionId, ipAddress);
+
+      res.json(sig);
+    } catch (err) {
+      console.error("Create signature error:", err);
+      res.status(500).json({ error: "Failed to save signature" });
+    }
+  });
+
   return httpServer;
 }

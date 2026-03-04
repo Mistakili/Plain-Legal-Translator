@@ -42,12 +42,14 @@ import {
   Sparkles,
   User,
   Bot,
+  PenTool,
 } from "lucide-react";
 import { SiDigitalocean } from "react-icons/si";
 import { type Document, type Analysis, type ChatMessage } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
+import { SignaturePanel } from "@/components/signature-pad";
 
 const severityConfig = {
   low: {
@@ -610,7 +612,7 @@ export default function AnalysisPage() {
             </section>
 
             <Tabs defaultValue="translation" className="space-y-4">
-              <TabsList className="w-full grid grid-cols-4" data-testid="tabs-analysis">
+              <TabsList className="w-full grid grid-cols-5" data-testid="tabs-analysis">
                 <TabsTrigger value="translation" data-testid="tab-translation">
                   <BookOpen className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
                   Translation
@@ -626,6 +628,10 @@ export default function AnalysisPage() {
                 <TabsTrigger value="chat" data-testid="tab-chat">
                   <MessageSquare className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
                   Ask AI
+                </TabsTrigger>
+                <TabsTrigger value="sign" data-testid="tab-sign">
+                  <PenTool className="w-3.5 h-3.5 mr-1.5 hidden sm:block" />
+                  Sign
                 </TabsTrigger>
               </TabsList>
 
@@ -675,6 +681,12 @@ export default function AnalysisPage() {
               <TabsContent value="chat">
                 <Card className="p-5">
                   <ChatPanel documentId={doc.id} />
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="sign">
+                <Card className="p-5">
+                  <SignaturePanel documentId={doc.id} documentTitle={doc.title} />
                 </Card>
               </TabsContent>
             </Tabs>

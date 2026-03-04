@@ -1,4 +1,4 @@
-import { type Document, type InsertDocument, type ChatMessage, type InsertChatMessage, documents, chatMessages } from "@shared/schema";
+import { type Document, type InsertDocument, type ChatMessage, type InsertChatMessage, type Signature, type InsertSignature, documents, chatMessages, signatures } from "@shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -11,6 +11,8 @@ export interface IStorage {
   deleteDocument(id: string, sessionId: string): Promise<void>;
   createChatMessage(msg: InsertChatMessage): Promise<ChatMessage>;
   getChatMessages(documentId: string): Promise<ChatMessage[]>;
+  createSignature(sig: InsertSignature, sessionId: string, ipAddress: string): Promise<Signature>;
+  getSignatures(documentId: string, sessionId: string): Promise<Signature[]>;
 }
 
 const pool = new pg.Pool({
@@ -42,6 +44,7 @@ export class DatabaseStorage implements IStorage {
   async deleteDocument(id: string, sessionId: string): Promise<void> {
     const doc = await this.getDocument(id, sessionId);
     if (!doc) return;
+    await db.delete(signatures).where(eq(signatures.documentId, id));
     await db.delete(chatMessages).where(eq(chatMessages.documentId, id));
     await db.delete(documents).where(eq(documents.id, id));
   }
@@ -53,6 +56,15 @@ export class DatabaseStorage implements IStorage {
 
   async getChatMessages(documentId: string): Promise<ChatMessage[]> {
     return db.select().from(chatMessages).where(eq(chatMessages.documentId, documentId)).orderBy(chatMessages.createdAt);
+  }
+
+  async createSignature(sig: InsertSignature, sessionId: string, ipAddress: string): Promise<Signature> {
+    const [result] = await db.insert(signatures).values({ ...sig, sessionId, ipAddress }).returning();
+    return result;
+  }
+
+  async getSignatures(documentId: string, sessionId: string): Promise<Signature[]> {
+    return db.select().from(signatures).where(and(eq(signatures.documentId, documentId), eq(signatures.sessionId, sessionId))).orderBy(desc(signatures.signedAt));
   }
 }
 

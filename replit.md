@@ -21,25 +21,29 @@ PlainLegal is an AI-powered legal document translator that breaks down contracts
 - `client/src/App.tsx` - Route configuration + ThemeProvider wrapper
 
 ## Features
-- File upload (PDF, TXT, DOC, DOCX) with drag-and-drop support
+- File upload (PDF, TXT, DOC, DOCX) with drag-and-drop support (multi-file, up to 10)
 - Paste text directly or use pre-built sample documents
 - AI-powered plain English translation of each section
 - Risk flags with severity levels (low/medium/high/critical) and suggestions
 - Key legal term definitions
 - Overall risk meter with visual progress bar
 - Interactive AI Q&A chat - ask follow-up questions about your document
+- Document signing - draw or type your signature, with downloadable confirmation
+- Session-based document isolation (each browser sees only their own documents)
 - Dark mode toggle with localStorage persistence
 - Document history with status tracking
 - Framer Motion animations throughout
 
 ## API Endpoints
 - `POST /api/documents` - Submit document text for analysis
-- `POST /api/documents/upload` - Upload a file (PDF/TXT/DOC/DOCX) for analysis (multipart form, field: "file")
-- `GET /api/documents` - List all documents
-- `GET /api/documents/:id` - Get single document with analysis
-- `DELETE /api/documents/:id` - Delete a document (cascades to chat messages)
+- `POST /api/documents/upload` - Upload files (PDF/TXT/DOC/DOCX) for analysis (multipart form, field: "files", up to 10)
+- `GET /api/documents` - List all documents (session-scoped)
+- `GET /api/documents/:id` - Get single document with analysis (session-scoped)
+- `DELETE /api/documents/:id` - Delete a document (cascades to chat messages + signatures)
 - `GET /api/documents/:id/chat` - Get chat messages for a document
 - `POST /api/documents/:id/chat` - Send a chat message and get AI response
+- `GET /api/documents/:id/signatures` - Get signatures for a document (session-scoped)
+- `POST /api/documents/:id/signatures` - Sign a document (draw or typed signature)
 
 ## Dependencies
 - `multer` - File upload handling (multipart form data)

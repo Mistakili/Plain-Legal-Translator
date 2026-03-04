@@ -22,6 +22,27 @@ export const chatMessages = pgTable("chat_messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const signatures = pgTable("signatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull(),
+  sessionId: varchar("session_id"),
+  signerName: text("signer_name").notNull(),
+  signatureData: text("signature_data").notNull(),
+  signatureType: text("signature_type").notNull().default("draw"),
+  ipAddress: text("ip_address"),
+  signedAt: timestamp("signed_at").defaultNow().notNull(),
+});
+
+export const insertSignatureSchema = createInsertSchema(signatures).omit({
+  id: true,
+  sessionId: true,
+  ipAddress: true,
+  signedAt: true,
+});
+
+export type Signature = typeof signatures.$inferSelect;
+export type InsertSignature = z.infer<typeof insertSignatureSchema>;
+
 export const riskFlagSchema = z.object({
   clause: z.string(),
   severity: z.enum(["low", "medium", "high", "critical"]),
