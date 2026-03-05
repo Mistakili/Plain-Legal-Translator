@@ -2,8 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDocumentSchema, analysisSchema, insertChatMessageSchema } from "@shared/schema";
+import { z } from "zod";
 import OpenAI from "openai";
 import multer from "multer";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 let PDFParseClass: any = null;
 async function getPDFParseClass() {
   if (!PDFParseClass) {
@@ -93,6 +95,11 @@ Guidelines:
 - Keep responses concise but thorough
 - If asked about risks, reference the specific clauses from the document`;
 
+function stripFileData(doc: any) {
+  const { fileData, ...rest } = doc;
+  return { ...rest, hasOriginalPdf: !!fileData && doc.fileType === "application/pdf" };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -106,7 +113,7 @@ export async function registerRoutes(
 
       const sessionId = req.session.id;
       const doc = await storage.createDocument(parsed.data, sessionId);
-      res.json(doc);
+      res.json(stripFileData(doc));
 
       analyzeDocument(doc.id, parsed.data.originalText);
     } catch (err) {
@@ -188,11 +195,12 @@ export async function registerRoutes(
           }
 
           const title = file.originalname.replace(/\.[^/.]+$/, "") || "Uploaded Document";
+          const fileBase64 = file.mimetype === "application/pdf" ? file.buffer.toString("base64") : null;
           const doc = await storage.createDocument({
             title,
             originalText: extractedText.trim(),
-          }, sessionId);
-          results.push(doc);
+          }, sessionId, fileBase64, file.mimetype);
+          results.push(stripFileData(doc));
 
           analyzeDocument(doc.id, extractedText.trim());
         } catch {
@@ -215,7 +223,7 @@ export async function registerRoutes(
     try {
       const sessionId = req.session.id;
       const docs = await storage.getDocuments(sessionId);
-      res.json(docs);
+      res.json(docs.map(stripFileData));
     } catch (err) {
       console.error("Get documents error:", err);
       res.status(500).json({ error: "Failed to fetch documents" });
@@ -229,7 +237,7 @@ export async function registerRoutes(
       if (!doc) {
         return res.status(404).json({ error: "Document not found" });
       }
-      res.json(doc);
+      res.json(stripFileData(doc));
     } catch (err) {
       console.error("Get document error:", err);
       res.status(500).json({ error: "Failed to fetch document" });
@@ -378,6 +386,120 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Create signature error:", err);
       res.status(500).json({ error: "Failed to save signature" });
+    }
+  });
+
+  app.get("/api/documents/:id/pdf", async (req, res) => {
+    try {
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      if (!doc.fileData || doc.fileType !== "application/pdf") {
+        return res.status(404).json({ error: "No original PDF available" });
+      }
+      const pdfBuffer = Buffer.from(doc.fileData, "base64");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Length", pdfBuffer.length);
+      res.send(pdfBuffer);
+    } catch (err) {
+      console.error("Get PDF error:", err);
+      res.status(500).json({ error: "Failed to fetch PDF" });
+    }
+  });
+
+  app.post("/api/documents/:id/generate-signed-pdf", async (req, res) => {
+    try {
+      const sessionId = req.session.id;
+      const doc = await storage.getDocument(req.params.id, sessionId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      if (!doc.fileData || doc.fileType !== "application/pdf") {
+        return res.status(404).json({ error: "No original PDF available" });
+      }
+
+      const overlaySchema = z.object({
+        overlays: z.array(z.object({
+          type: z.enum(["signature", "text", "date"]),
+          page: z.number().int().min(0),
+          x: z.number().min(0).max(1),
+          y: z.number().min(0).max(1),
+          width: z.number().min(0.01).max(1),
+          height: z.number().min(0.005).max(1),
+          value: z.string().min(1).max(500000),
+          fontSize: z.number().min(6).max(72).optional(),
+        })).min(1).max(50),
+      });
+
+      const parsed = overlaySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid overlay data", details: parsed.error.message });
+      }
+      const { overlays } = parsed.data;
+
+      const pdfBuffer = Buffer.from(doc.fileData, "base64");
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
+      const pages = pdfDoc.getPages();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const italicFont = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+
+      for (const overlay of overlays) {
+        if (overlay.page < 0 || overlay.page >= pages.length) continue;
+        const page = pages[overlay.page];
+        const { width: pw, height: ph } = page.getSize();
+
+        const pdfX = overlay.x * pw;
+        const pdfY = ph - (overlay.y * ph) - (overlay.height * ph);
+
+        if (overlay.type === "signature" && overlay.value.startsWith("data:image")) {
+          try {
+            const base64Data = overlay.value.split(",")[1];
+            const imgBytes = Buffer.from(base64Data, "base64");
+            const pngImage = await pdfDoc.embedPng(imgBytes);
+            const drawW = overlay.width * pw;
+            const drawH = overlay.height * ph;
+            page.drawImage(pngImage, {
+              x: pdfX,
+              y: pdfY,
+              width: drawW,
+              height: drawH,
+            });
+          } catch (imgErr) {
+            console.error("Failed to embed signature image:", imgErr);
+          }
+        } else if (overlay.type === "signature") {
+          const fontSize = Math.min(overlay.height * ph * 0.6, 28);
+          page.drawText(overlay.value, {
+            x: pdfX,
+            y: pdfY + (overlay.height * ph * 0.2),
+            size: fontSize,
+            font: italicFont,
+            color: rgb(0, 0, 0),
+          });
+        } else if (overlay.type === "text" || overlay.type === "date") {
+          const fontSize = overlay.fontSize || 12;
+          page.drawText(overlay.value, {
+            x: pdfX,
+            y: pdfY + (overlay.height * ph * 0.3),
+            size: fontSize,
+            font,
+            color: rgb(0, 0, 0),
+          });
+        }
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const safeTitle = doc.title.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "-");
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${safeTitle}-signed.pdf"`);
+      res.setHeader("Content-Length", pdfBytes.length);
+      res.send(Buffer.from(pdfBytes));
+    } catch (err) {
+      console.error("Generate signed PDF error:", err);
+      res.status(500).json({ error: "Failed to generate signed PDF" });
     }
   });
 

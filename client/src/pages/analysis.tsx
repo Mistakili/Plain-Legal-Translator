@@ -50,6 +50,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
 import { SignaturePanel } from "@/components/signature-pad";
+import { PDFSigner } from "@/components/pdf-signer";
 
 const severityConfig = {
   low: {
@@ -686,7 +687,11 @@ export default function AnalysisPage() {
 
               <TabsContent value="sign">
                 <Card className="p-5">
-                  <SignaturePanel documentId={doc.id} documentTitle={doc.title} documentContent={doc.content} />
+                  {(doc as any).hasOriginalPdf ? (
+                    <PDFSigner documentId={doc.id} documentTitle={doc.title} />
+                  ) : (
+                    <SignaturePanel documentId={doc.id} documentTitle={doc.title} documentContent={doc.content} />
+                  )}
                 </Card>
               </TabsContent>
             </Tabs>

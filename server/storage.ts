@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
 export interface IStorage {
-  createDocument(doc: InsertDocument, sessionId: string): Promise<Document>;
+  createDocument(doc: InsertDocument, sessionId: string, fileData?: string | null, fileType?: string | null): Promise<Document>;
   getDocument(id: string, sessionId: string): Promise<Document | undefined>;
   updateDocument(id: string, data: Partial<Document>): Promise<Document | undefined>;
   getDocuments(sessionId: string): Promise<Document[]>;
@@ -22,8 +22,8 @@ const pool = new pg.Pool({
 export const db = drizzle(pool);
 
 export class DatabaseStorage implements IStorage {
-  async createDocument(doc: InsertDocument, sessionId: string): Promise<Document> {
-    const [result] = await db.insert(documents).values({ ...doc, sessionId }).returning();
+  async createDocument(doc: InsertDocument, sessionId: string, fileData?: string | null, fileType?: string | null): Promise<Document> {
+    const [result] = await db.insert(documents).values({ ...doc, sessionId, fileData: fileData || null, fileType: fileType || null }).returning();
     return result;
   }
 
