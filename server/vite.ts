@@ -34,6 +34,10 @@ export async function setupVite(server: Server, app: Express) {
   app.use("/{*path}", async (req, res, next) => {
     const url = req.originalUrl;
 
+    if (url.endsWith('.js') || url.endsWith('.json') || url.endsWith('.png') || url.endsWith('.ico') || url.endsWith('.svg') || url.endsWith('.webmanifest')) {
+      return next();
+    }
+
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,

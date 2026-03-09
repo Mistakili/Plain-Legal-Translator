@@ -35,6 +35,7 @@ const allowlist = [
 
 const forceExternal = [
   "pdf-parse",
+  "tesseract.js",
 ];
 
 async function buildAll() {
