@@ -41,6 +41,10 @@ import {
   FileCheck,
   FileUp,
   X,
+  PenTool,
+  GripVertical,
+  FileDown,
+  Calendar,
 } from "lucide-react";
 import { SiDigitalocean } from "react-icons/si";
 import { type Document } from "@shared/schema";
@@ -240,6 +244,7 @@ export default function Home() {
               size="icon"
               variant="ghost"
               onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               data-testid="button-theme-toggle"
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -270,8 +275,9 @@ export default function Home() {
             <span className="text-muted-foreground">Before You Sign</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
-            Upload any legal document and get an instant plain English translation with risk analysis.
-            Powered by DigitalOcean Gradient AI, PlainLegal makes the law accessible to everyone.
+            Upload any legal document and get an instant plain English translation, risk analysis,
+            AI-powered Q&A, and visual document signing — all in one place.
+            Powered by DigitalOcean Gradient AI.
           </p>
         </motion.section>
 
@@ -312,6 +318,10 @@ export default function Home() {
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Upload documents by clicking or dragging files here"
                   data-testid="dropzone-upload"
                 >
                   <input
@@ -471,47 +481,74 @@ export default function Home() {
           </Card>
         </motion.section>
 
-        <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              icon: FileText,
-              title: "Plain English",
-              description: "Complex jargon translated into simple language anyone can understand.",
-            },
-            {
-              icon: AlertTriangle,
-              title: "Risk Flags",
-              description: "Potential risks highlighted with severity levels and actionable suggestions.",
-            },
-            {
-              icon: Shield,
-              title: "Key Terms",
-              description: "Important legal terms defined clearly so you know what each clause means.",
-            },
-            {
-              icon: MessageSquare,
-              title: "Ask Questions",
-              description: "Chat with AI about your document to get answers to specific questions.",
-            },
-          ].map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.35 + i * 0.08 }}
-            >
-              <Card className="p-4 space-y-2.5 h-full hover-elevate">
-                <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center">
-                  <feature.icon className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="font-semibold text-sm" data-testid={`text-feature-${feature.title.toLowerCase().replace(/\s/g, "-")}`}>
-                  {feature.title}
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
-              </Card>
-            </motion.div>
-          ))}
-        </section>
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="space-y-5"
+        >
+          <div className="text-center">
+            <h3 className="text-lg font-semibold" data-testid="text-features-heading">Everything You Need to Review Legal Documents</h3>
+            <p className="text-sm text-muted-foreground mt-1">From analysis to signing — a complete legal document workflow</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              {
+                icon: FileText,
+                title: "Plain English Translation",
+                description: "Every section of your contract translated from legal jargon into simple, clear language anyone can understand.",
+                accent: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+              },
+              {
+                icon: AlertTriangle,
+                title: "Risk Detection & Flags",
+                description: "Automatically identifies risky clauses with severity levels (low to critical) and provides actionable suggestions.",
+                accent: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+              },
+              {
+                icon: Shield,
+                title: "Key Term Definitions",
+                description: "Complex legal terms explained in plain language so you know exactly what each clause commits you to.",
+                accent: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+              },
+              {
+                icon: MessageSquare,
+                title: "AI Q&A Chat",
+                description: "Ask follow-up questions about any part of your document and get instant, context-aware answers from AI.",
+                accent: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+              },
+              {
+                icon: PenTool,
+                title: "Visual PDF Signing",
+                description: "Upload a PDF, see every page rendered, then drag and drop your signature exactly where it needs to go.",
+                accent: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+              },
+              {
+                icon: FileUp,
+                title: "Multi-Format Upload",
+                description: "Drag and drop up to 10 files at once — supports PDF, TXT, DOC, and DOCX with batch processing.",
+                accent: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+              },
+            ].map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 + i * 0.06 }}
+              >
+                <Card className="p-5 space-y-3 h-full hover-elevate" data-testid={`card-feature-${i}`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${feature.accent.split(" ")[0]}`}>
+                    <feature.icon className={`w-5 h-5 ${feature.accent.split(" ").slice(1).join(" ")}`} />
+                  </div>
+                  <h3 className="font-semibold text-sm" data-testid={`text-feature-${feature.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                    {feature.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
 
         {(loadingDocs || documents.length > 0) && (
           <motion.section
@@ -588,6 +625,7 @@ export default function Home() {
                               <Button
                                 size="icon"
                                 variant="ghost"
+                                aria-label={`View analysis for ${doc.title}`}
                                 data-testid={`button-view-${doc.id}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -602,6 +640,7 @@ export default function Home() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
+                                  aria-label={`Delete ${doc.title}`}
                                   data-testid={`button-delete-${doc.id}`}
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -641,36 +680,72 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.6 }}
-          className="pt-4"
+          className="space-y-5"
         >
-          <Card className="p-6 bg-primary/5 border-primary/10">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                <BookOpen className="w-6 h-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-sm">How PlainLegal Works</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-                  PlainLegal uses DigitalOcean Gradient AI (Llama 3.3 70B) to read through your legal documents,
-                  identify each section, translate it into plain English, flag potential risks with severity levels,
-                  and define complex legal terms. You can then ask follow-up questions about any part of your document.
-                </p>
-              </div>
-            </div>
-          </Card>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold" data-testid="text-how-heading">How It Works</h3>
+            <p className="text-sm text-muted-foreground mt-1">Three steps from confusion to confidence</p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              {
+                step: "1",
+                icon: FileUp,
+                title: "Upload Your Document",
+                description: "Upload a PDF, DOC, or TXT file, paste text directly, or try one of our pre-built sample documents to see it in action.",
+              },
+              {
+                step: "2",
+                icon: Sparkles,
+                title: "AI Analyzes Everything",
+                description: "DigitalOcean Gradient AI (Llama 3.3 70B) reads every clause, translates legal jargon, flags risks, and defines key terms.",
+              },
+              {
+                step: "3",
+                icon: PenTool,
+                title: "Review, Ask & Sign",
+                description: "Browse the plain English translation, chat with AI about concerns, then visually sign the PDF right where you need to.",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.65 + i * 0.1 }}
+              >
+                <Card className="p-5 h-full bg-primary/5 border-primary/10" data-testid={`card-step-${i}`}>
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <span className="text-sm font-bold text-primary-foreground">{item.step}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <h4 className="font-semibold text-sm">{item.title}</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </motion.section>
       </main>
 
       <footer className="border-t mt-8">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Scale className="w-3.5 h-3.5" />
-            <span>PlainLegal — AI Legal Document Translator</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span>Built with</span>
-            <SiDigitalocean className="w-3.5 h-3.5" />
-            <span>DigitalOcean Gradient AI</span>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Scale className="w-3.5 h-3.5" />
+              <span>PlainLegal — AI Legal Document Translator</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span>Built with</span>
+                <SiDigitalocean className="w-3.5 h-3.5" />
+                <span>DigitalOcean Gradient AI</span>
+              </div>
+              <span className="text-muted-foreground/40">|</span>
+              <span>DigitalOcean Gradient AI Hackathon</span>
+            </div>
           </div>
         </div>
       </footer>

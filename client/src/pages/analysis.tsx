@@ -517,6 +517,7 @@ export default function AnalysisPage() {
               size="icon"
               variant="ghost"
               onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               data-testid="button-theme-toggle"
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -526,6 +527,7 @@ export default function AnalysisPage() {
                 <Button
                   size="icon"
                   variant="ghost"
+                  aria-label="Delete document"
                   data-testid="button-delete-doc"
                 >
                   <Trash2 className="w-4 h-4" />
