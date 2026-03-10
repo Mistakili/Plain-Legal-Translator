@@ -692,7 +692,7 @@ export default function AnalysisPage() {
                   {(doc as any).hasOriginalPdf ? (
                     <PDFSigner documentId={doc.id} documentTitle={doc.title} />
                   ) : (
-                    <SignaturePanel documentId={doc.id} documentTitle={doc.title} documentContent={doc.originalText} />
+                    <SignaturePanel documentId={doc.id} documentTitle={doc.title} documentContent={doc.content} />
                   )}
                 </Card>
               </TabsContent>

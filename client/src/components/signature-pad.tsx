@@ -1,49 +1,115 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { PenTool, Type, Loader2, Eraser, CheckCircle2, ShieldCheck } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import {
+  PenTool,
+  Type,
+  Eraser,
+  Download,
+  CheckCircle,
+  Loader2,
+  FileDown,
+} from "lucide-react";
+import { type Signature } from "@shared/schema";
+import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
 
-interface SignaturePadProps {
-  onSave: (signatureData: string, type: string, signerName: string) => void;
-  onCancel: () => void;
+interface Point {
+  x: number;
+  y: number;
 }
 
-export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
+export function SignaturePanel({
+  documentId,
+  documentTitle,
+  documentContent,
+}: {
+  documentId: string;
+  documentTitle: string;
+  documentContent: string;
+}) {
+  const [signerName, setSignerName] = useState("");
+  const [typedSignature, setTypedSignature] = useState("");
+  const [signMode, setSignMode] = useState<"draw" | "type">("draw");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
-  const [signerName, setSignerName] = useState("");
-  const [typedSignature, setTypedSignature] = useState("");
-  const [activeTab, setActiveTab] = useState("draw");
-  const [isSaving, setIsSaving] = useState(false);
+  const lastPointRef = useRef<Point | null>(null);
+  const { toast } = useToast();
+
+  const { data: existingSignatures = [] } = useQuery<Signature[]>({
+    queryKey: ["/api/documents", documentId, "signatures"],
+  });
+
+  const signMutation = useMutation({
+    mutationFn: async (data: {
+      signerName: string;
+      signatureData: string;
+      signatureType: string;
+      documentId: string;
+    }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/documents/${documentId}/signatures`,
+        data,
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/documents", documentId, "signatures"],
+      });
+      setSignerName("");
+      setTypedSignature("");
+      clearCanvas();
+      toast({
+        title: "Document signed",
+        description: "Your signature has been recorded successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Signing failed",
+        description: "Failed to save your signature. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const initCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * 2;
-    canvas.height = rect.height * 2;
-    ctx.scale(2, 2);
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    ctx.lineWidth = 2.5;
+
+    const isDark = document.documentElement.classList.contains("dark");
+    ctx.strokeStyle = isDark ? "#e5e7eb" : "#1a1a1a";
   }, []);
 
   useEffect(() => {
     initCanvas();
+    const handleResize = () => initCanvas();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [initCanvas]);
 
-  const getPos = (e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
+  const getPosition = (e: React.MouseEvent | React.TouchEvent): Point => {
+    const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     if ("touches" in e) {
       return {
@@ -51,30 +117,38 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
         y: e.touches[0].clientY - rect.top,
       };
     }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+      x: (e as React.MouseEvent).clientX - rect.left,
+      y: (e as React.MouseEvent).clientY - rect.top,
+    };
   };
 
-  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
-    const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
-    const pos = getPos(e);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     setIsDrawing(true);
+    setHasDrawn(true);
+    const point = getPosition(e);
+    lastPointRef.current = point;
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     if (!isDrawing) return;
-    const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
-    const pos = getPos(e);
-    ctx.lineTo(pos.x, pos.y);
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || !lastPointRef.current) return;
+
+    const point = getPosition(e);
+    ctx.beginPath();
+    ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+    ctx.lineTo(point.x, point.y);
     ctx.stroke();
-    setHasDrawn(true);
+    lastPointRef.current = point;
   };
 
-  const endDraw = () => {
+  const stopDrawing = () => {
     setIsDrawing(false);
+    lastPointRef.current = null;
   };
 
   const clearCanvas = () => {
@@ -86,211 +160,373 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
     setHasDrawn(false);
   };
 
-  const handleSave = () => {
-    if (!signerName.trim()) return;
-    setIsSaving(true);
-
-    if (activeTab === "draw") {
-      const canvas = canvasRef.current;
-      if (!canvas || !hasDrawn) return;
-      const dataUrl = canvas.toDataURL("image/png");
-      onSave(dataUrl, "draw", signerName.trim());
-    } else {
-      if (!typedSignature.trim()) return;
-      onSave(typedSignature.trim(), "type", signerName.trim());
+  const handleSign = () => {
+    if (!signerName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter your full name.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    let signatureData = "";
+    if (signMode === "draw") {
+      const canvas = canvasRef.current;
+      if (!canvas || !hasDrawn) {
+        toast({
+          title: "Signature required",
+          description: "Please draw your signature on the pad.",
+          variant: "destructive",
+        });
+        return;
+      }
+      signatureData = canvas.toDataURL("image/png");
+    } else {
+      if (!typedSignature.trim()) {
+        toast({
+          title: "Signature required",
+          description: "Please type your signature.",
+          variant: "destructive",
+        });
+        return;
+      }
+      signatureData = typedSignature.trim();
+    }
+
+    signMutation.mutate({
+      signerName: signerName.trim(),
+      signatureData,
+      signatureType: signMode,
+      documentId,
+    });
   };
 
-  const canSave =
-    signerName.trim().length > 0 &&
-    ((activeTab === "draw" && hasDrawn) ||
-      (activeTab === "type" && typedSignature.trim().length > 0));
+  const scaleSignatureImage = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 400;
+        const maxH = 150;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW) { h = h * (maxW / w); w = maxW; }
+        if (h > maxH) { w = w * (maxH / h); h = maxH; }
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/png"));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
+  const generateSignedPDF = async (sig: Signature) => {
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 20;
+    const contentWidth = pageWidth - margin * 2;
+    const cursor = { y: margin };
+
+    const ensureSpace = (needed: number) => {
+      if (cursor.y + needed > pageHeight - margin) {
+        pdf.addPage();
+        cursor.y = margin;
+      }
+    };
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    const titleLines = pdf.splitTextToSize(documentTitle, contentWidth);
+    for (const line of titleLines) {
+      ensureSpace(8);
+      pdf.text(line, pageWidth / 2, cursor.y, { align: "center" });
+      cursor.y += 8;
+    }
+    cursor.y += 2;
+
+    pdf.setDrawColor(180, 180, 180);
+    pdf.line(margin, cursor.y, pageWidth - margin, cursor.y);
+    cursor.y += 8;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+
+    const textLines = pdf.splitTextToSize(documentContent, contentWidth);
+    const lineHeight = 5;
+
+    for (let i = 0; i < textLines.length; i++) {
+      ensureSpace(lineHeight);
+      pdf.text(textLines[i], margin, cursor.y);
+      cursor.y += lineHeight;
+    }
+
+    ensureSpace(70);
+
+    cursor.y += 5;
+    pdf.setDrawColor(180, 180, 180);
+    pdf.line(margin, cursor.y, pageWidth - margin, cursor.y);
+    cursor.y += 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text("SIGNATURE", margin, cursor.y);
+    cursor.y += 8;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(`Signed by: ${sig.signerName}`, margin, cursor.y);
+    cursor.y += 6;
+    pdf.text(`Date: ${new Date(sig.signedAt).toLocaleString()}`, margin, cursor.y);
+    cursor.y += 6;
+    pdf.text(`Method: ${sig.signatureType === "draw" ? "Handwritten (digital)" : "Typed"}`, margin, cursor.y);
+    cursor.y += 10;
+
+    if (sig.signatureType === "draw" && sig.signatureData.startsWith("data:image")) {
+      ensureSpace(35);
+      const scaled = await scaleSignatureImage(sig.signatureData);
+      pdf.setDrawColor(200, 200, 200);
+      pdf.rect(margin, cursor.y, 70, 25);
+      try {
+        pdf.addImage(scaled, "PNG", margin + 2, cursor.y + 2, 66, 21);
+      } catch {
+        pdf.setFont("helvetica", "italic");
+        pdf.text("[Signature image]", margin + 5, cursor.y + 14);
+      }
+      cursor.y += 30;
+    } else if (sig.signatureType === "type") {
+      ensureSpace(18);
+      pdf.setFont("times", "italic");
+      pdf.setFontSize(20);
+      pdf.text(sig.signatureData, margin, cursor.y + 5);
+      cursor.y += 12;
+      pdf.setDrawColor(100, 100, 100);
+      pdf.line(margin, cursor.y, margin + 70, cursor.y);
+      cursor.y += 8;
+    }
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(130, 130, 130);
+    cursor.y += 5;
+    ensureSpace(15);
+    pdf.text(`Document ID: ${documentId} | Signature ID: ${sig.id}`, margin, cursor.y);
+    cursor.y += 4;
+    pdf.text("This document was electronically signed using PlainLegal.", margin, cursor.y);
+
+    const pageCount = pdf.getNumberOfPages();
+    for (let p = 1; p <= pageCount; p++) {
+      pdf.setPage(p);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(160, 160, 160);
+      pdf.text(`Page ${p} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+    }
+
+    const safeTitle = documentTitle.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "-");
+    pdf.save(`${safeTitle}-signed.pdf`);
+  };
 
   return (
-    <div className="space-y-4" data-testid="signature-pad">
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Your Full Name</label>
+    <div className="space-y-6">
+      {existingSignatures.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <p className="text-sm font-semibold">Document Signed</p>
+          </div>
+          {existingSignatures.map((sig, i) => (
+            <motion.div
+              key={sig.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+            >
+              <Card
+                className="p-4 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20"
+                data-testid={`card-signature-${i}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <p className="text-sm font-medium">{sig.signerName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Signed on {new Date(sig.signedAt).toLocaleString()} ·{" "}
+                      {sig.signatureType === "draw" ? "Handwritten" : "Typed"}
+                    </p>
+                    {sig.signatureType === "draw" &&
+                      sig.signatureData.startsWith("data:image") && (
+                        <div className="mt-2 bg-white dark:bg-gray-900 rounded border p-2 inline-block">
+                          <img
+                            src={sig.signatureData}
+                            alt="Signature"
+                            className="h-12 w-auto"
+                            data-testid={`img-signature-${i}`}
+                          />
+                        </div>
+                      )}
+                    {sig.signatureType === "type" && (
+                      <p
+                        className="text-lg italic font-serif mt-1"
+                        data-testid={`text-typed-signature-${i}`}
+                      >
+                        {sig.signatureData}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        generateSignedPDF(sig).catch(() => {
+                          toast({ title: "PDF generation failed", description: "Could not generate the PDF. Please try again.", variant: "destructive" });
+                        });
+                      }}
+                      data-testid={`button-download-pdf-${i}`}
+                    >
+                      <FileDown className="w-3.5 h-3.5 mr-1.5" />
+                      Download PDF
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+          <Separator />
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+            <PenTool className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">
+              {existingSignatures.length > 0
+                ? "Add Another Signature"
+                : "Sign This Document"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Draw or type your signature below
+            </p>
+          </div>
+        </div>
+
         <Input
+          data-testid="input-signer-name"
+          placeholder="Your full legal name"
           value={signerName}
           onChange={(e) => setSignerName(e.target.value)}
-          placeholder="Enter your full name"
-          data-testid="input-signer-name"
         />
-      </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full">
-          <TabsTrigger value="draw" className="flex-1 gap-1.5" data-testid="tab-draw">
-            <PenTool className="w-3.5 h-3.5" />
-            Draw
-          </TabsTrigger>
-          <TabsTrigger value="type" className="flex-1 gap-1.5" data-testid="tab-type">
-            <Type className="w-3.5 h-3.5" />
-            Type
-          </TabsTrigger>
-        </TabsList>
+        <Tabs
+          value={signMode}
+          onValueChange={(v) => setSignMode(v as "draw" | "type")}
+          className="space-y-3"
+        >
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="draw" data-testid="tab-draw-signature">
+              <PenTool className="w-3.5 h-3.5 mr-1.5" />
+              Draw
+            </TabsTrigger>
+            <TabsTrigger value="type" data-testid="tab-type-signature">
+              <Type className="w-3.5 h-3.5 mr-1.5" />
+              Type
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="draw" className="space-y-2 mt-3">
-          <div className="relative border rounded-lg bg-white dark:bg-gray-950 overflow-hidden">
-            <canvas
-              ref={canvasRef}
-              className="w-full h-40 cursor-crosshair touch-none"
-              onMouseDown={startDraw}
-              onMouseMove={draw}
-              onMouseUp={endDraw}
-              onMouseLeave={endDraw}
-              onTouchStart={startDraw}
-              onTouchMove={draw}
-              onTouchEnd={endDraw}
-              data-testid="canvas-signature"
-            />
-            {!hasDrawn && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-sm text-gray-400">Draw your signature here</span>
-              </div>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearCanvas}
-            className="text-xs gap-1"
-            data-testid="button-clear-signature"
-          >
-            <Eraser className="w-3.5 h-3.5" />
-            Clear
-          </Button>
-        </TabsContent>
+          <TabsContent value="draw" className="space-y-2">
+            <div className="relative border-2 border-dashed rounded-md bg-white dark:bg-gray-950 overflow-hidden">
+              <canvas
+                ref={canvasRef}
+                className="w-full cursor-crosshair touch-none"
+                style={{ height: "160px" }}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+                data-testid="canvas-signature"
+              />
+              {!hasDrawn && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <p className="text-sm text-muted-foreground/50">Sign here</p>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearCanvas}
+                data-testid="button-clear-signature"
+              >
+                <Eraser className="w-3.5 h-3.5 mr-1.5" />
+                Clear
+              </Button>
+            </div>
+          </TabsContent>
 
-        <TabsContent value="type" className="mt-3">
-          <div className="space-y-2">
+          <TabsContent value="type" className="space-y-2">
+            <div className="border-2 border-dashed rounded-md p-6 bg-white dark:bg-gray-950 text-center min-h-[160px] flex items-center justify-center">
+              {typedSignature ? (
+                <p
+                  className="text-3xl italic font-serif"
+                  data-testid="text-typed-preview"
+                >
+                  {typedSignature}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground/50">
+                  Your typed signature will appear here
+                </p>
+              )}
+            </div>
             <Input
+              data-testid="input-typed-signature"
+              placeholder="Type your signature exactly as you want it to appear"
               value={typedSignature}
               onChange={(e) => setTypedSignature(e.target.value)}
-              placeholder="Type your signature"
-              className="text-center text-xl italic font-serif"
-              data-testid="input-typed-signature"
             />
-            {typedSignature && (
-              <div className="border rounded-lg p-4 bg-white dark:bg-gray-950 text-center">
-                <span className="text-2xl italic font-serif" data-testid="text-signature-preview">
-                  {typedSignature}
-                </span>
-              </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
+            By signing, you acknowledge that you have reviewed this document and
+            its AI analysis.
+          </p>
+          <Button
+            onClick={handleSign}
+            disabled={signMutation.isPending}
+            size="lg"
+            data-testid="button-sign-document"
+          >
+            {signMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Signing...
+              </>
+            ) : (
+              <>
+                <PenTool className="w-4 h-4" />
+                Sign Document
+              </>
             )}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex gap-2 pt-2">
-        <Button
-          variant="outline"
-          onClick={onCancel}
-          className="flex-1"
-          data-testid="button-cancel-signature"
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={!canSave || isSaving}
-          className="flex-1"
-          data-testid="button-save-signature"
-        >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply Signature"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-interface SignaturePanelProps {
-  documentId: string;
-  documentTitle: string;
-  documentContent?: string;
-}
-
-export function SignaturePanel({ documentId, documentTitle }: SignaturePanelProps) {
-  const [showPad, setShowPad] = useState(false);
-  const [signed, setSigned] = useState(false);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const { data: signatures } = useQuery<any[]>({
-    queryKey: ["/api/documents", documentId, "signatures"],
-  });
-
-  const signMutation = useMutation({
-    mutationFn: async (payload: { signatureData: string; signerName: string; signatureType: string; documentId: string }) => {
-      const res = await apiRequest("POST", `/api/documents/${documentId}/sign`, payload);
-      return res.json();
-    },
-    onSuccess: () => {
-      setSigned(true);
-      setShowPad(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/documents", documentId, "signatures"] });
-      toast({ title: "Document signed", description: `Successfully signed "${documentTitle}"` });
-    },
-    onError: (err: Error) => {
-      toast({ title: "Signing failed", description: err.message, variant: "destructive" });
-    },
-  });
-
-  if (signed || (signatures && signatures.length > 0)) {
-    return (
-      <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20" data-testid="signature-complete">
-        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" />
-        <div className="flex-1">
-          <p className="text-sm font-medium text-green-700 dark:text-green-300">Document Signed</p>
-          <p className="text-xs text-green-600/80 dark:text-green-400/80">
-            {signatures?.[0]?.signerName ? `Signed by ${signatures[0].signerName}` : "Signature recorded"}
-          </p>
+          </Button>
         </div>
-        <Badge variant="outline" className="border-green-500/30 text-green-600 dark:text-green-400 text-xs">
-          <CheckCircle2 className="w-3 h-3" />
-          Signed
-        </Badge>
       </div>
-    );
-  }
-
-  if (showPad) {
-    return (
-      <div className="space-y-3" data-testid="signature-panel-pad">
-        <SignaturePad
-          onSave={(signatureData, type, signerName) => {
-            signMutation.mutate({
-              signatureData,
-              signerName,
-              signatureType: type,
-              documentId,
-            });
-          }}
-          onCancel={() => setShowPad(false)}
-        />
-        {signMutation.isError && (
-          <p className="text-sm text-destructive" data-testid="text-signature-error">
-            {signMutation.error?.message || "Failed to sign. Please try again."}
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3" data-testid="signature-panel">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <ShieldCheck className="w-4 h-4" />
-        <span>E-Signature</span>
-      </div>
-      <Button
-        onClick={() => setShowPad(true)}
-        className="w-full gap-2"
-        data-testid="button-open-signature"
-      >
-        <PenTool className="w-4 h-4" />
-        Sign This Document
-      </Button>
     </div>
   );
 }
