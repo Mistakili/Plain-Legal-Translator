@@ -42,6 +42,15 @@ import {
   FileCheck,
   FileUp,
   X,
+  PenTool,
+  Scale,
+  ScanLine,
+  Camera,
+  LogOut,
+  User,
+  Search,
+  Cloud,
+  FolderOpen,
 } from "lucide-react";
 import { SiDigitalocean, SiGoogledrive } from "react-icons/si";
 import { type Document } from "@shared/schema";
@@ -372,34 +381,36 @@ export default function Home() {
         <title>Dashboard — SignSafe | AI Contract Analysis & E-Signatures</title>
         <meta name="description" content="Upload and analyze contracts with AI. Get plain English translations, risk flags, and sign documents electronically." />
       </Helmet>
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+      <header className="fixed top-0 left-0 right-0 z-[100] border-b border-gray-200/60 dark:border-white/[0.06] bg-white/80 dark:bg-[#0a0a0f]/80 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3" data-testid="link-home-logo">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight" data-testid="text-app-title">SignSafe</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">Understand Any Contract Before You Sign</p>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight" data-testid="text-app-title">SignSafe</h1>
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-white/50 hidden sm:block">AI Contract Analysis & E-Signatures</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             {user && analysesRemaining !== null && !user.isPremium && (
-              <Badge variant="outline" className="text-xs hidden sm:inline-flex gap-1" data-testid="badge-analyses-remaining">
+              <Badge variant="outline" className="text-xs hidden lg:inline-flex gap-1 border-gray-300 dark:border-white/20" data-testid="badge-analyses-remaining">
                 <Zap className="w-3 h-3" />
                 {analysesRemaining}/3 analyses left
               </Badge>
             )}
             {user && (
-              <span className="text-xs text-muted-foreground hidden md:inline" data-testid="text-user-display">
-                {user.displayName || user.email}
-              </span>
+              <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-500 dark:text-white/60" data-testid="text-user-display">
+                <User className="w-3.5 h-3.5" />
+                <span>{user.displayName || user.email}</span>
+              </div>
             )}
             <Button
               size="icon"
               variant="ghost"
               onClick={toggleTheme}
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="text-gray-500 hover:text-gray-900 dark:text-white/60 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10"
               data-testid="button-theme-toggle"
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -409,38 +420,39 @@ export default function Home() {
                 variant="ghost"
                 size="sm"
                 onClick={logout}
-                className="text-xs"
+                className="text-xs text-gray-600 hover:text-gray-900 dark:text-white/70 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 gap-1.5"
                 data-testid="button-logout"
               >
-                Sign Out
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
               </Button>
             )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-8 space-y-10">
         <motion.section
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center space-y-5 pt-6 pb-2"
+          className="text-center space-y-5 pt-4 pb-2"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-sm font-medium"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            AI-Powered Legal Analysis
+            AI-Powered Contract Analysis
           </motion.div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight" data-testid="text-hero-heading">
-            Understand Any Contract
-            <br />
-            <span className="text-muted-foreground">Before You Sign</span>
+            Your Contract Dashboard
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
+          <p className="text-gray-500 dark:text-white/50 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
+            Upload any legal document and get an instant plain English translation, risk analysis,
+            AI-powered Q&A, and visual document signing — all in one place.
           </p>
         </motion.section>
 
@@ -881,10 +893,84 @@ export default function Home() {
           </Card>
         </motion.section>
 
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="space-y-5"
+        >
+          <div className="text-center">
+            <h3 className="text-lg font-semibold" data-testid="text-features-heading">Everything You Need to Review Legal Documents</h3>
+            <p className="text-sm text-gray-500 dark:text-white/50 mt-1">From analysis to signing — a complete legal document workflow</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              {
+                icon: FileText,
+                title: "Plain English Translation",
+                description: "Every section of your contract translated from legal jargon into simple, clear language anyone can understand.",
+                accent: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+              },
+              {
+                icon: AlertTriangle,
+                title: "Risk Detection & Flags",
+                description: "Automatically identifies risky clauses with severity levels (low to critical) and provides actionable suggestions.",
+                accent: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+              },
+              {
+                icon: Shield,
+                title: "Key Term Definitions",
+                description: "Complex legal terms explained in plain language so you know exactly what each clause commits you to.",
+                accent: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+              },
+              {
+                icon: MessageSquare,
+                title: "AI Q&A Chat",
+                description: "Ask follow-up questions about any part of your document and get instant, context-aware answers from AI.",
+                accent: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+              },
+              {
+                icon: PenTool,
+                title: "Visual PDF Signing",
+                description: "Upload a PDF, see every page rendered, then drag and drop your signature exactly where it needs to go.",
+                accent: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+              },
+              {
+                icon: FileUp,
+                title: "Multi-Format Upload",
+                description: "Drag and drop up to 10 files at once — supports PDF, TXT, DOC, and DOCX with batch processing.",
+                accent: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+              },
+            ].map((feature, i) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 + i * 0.06 }}
+              >
+                <Card className="p-5 space-y-3 h-full hover-elevate" data-testid={`card-feature-${i}`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${feature.accent.split(" ")[0]}`}>
+                    <feature.icon className={`w-5 h-5 ${feature.accent.split(" ").slice(1).join(" ")}`} />
+                  </div>
+                  <h3 className="font-semibold text-sm" data-testid={`text-feature-${feature.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                    {feature.title}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-white/50 leading-relaxed">{feature.description}</p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
 
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.6 }}
+          className="space-y-5"
+        >
           <div className="text-center">
             <h3 className="text-lg font-semibold" data-testid="text-how-heading">How It Works</h3>
-            <p className="text-sm text-muted-foreground mt-1">Three steps from confusion to confidence</p>
+            <p className="text-sm text-gray-500 dark:text-white/50 mt-1">Three steps from confusion to confidence</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             {[
@@ -892,13 +978,13 @@ export default function Home() {
                 step: "1",
                 icon: FileUp,
                 title: "Upload Your Document",
-                description: "Upload a PDF, DOC, or TXT file, paste text directly, or try one of our pre-built sample documents to see it in action.",
+                description: "Upload a PDF, DOC, or TXT file, import from Google Drive, scan a photo, or paste text directly.",
               },
               {
                 step: "2",
                 icon: Sparkles,
                 title: "AI Analyzes Everything",
-                description: "DigitalOcean Gradient AI (Llama 3.3 70B) reads every clause, translates legal jargon, flags risks, and defines key terms.",
+                description: "Advanced AI reads every clause, translates legal jargon, flags risks, and defines key terms in seconds.",
               },
               {
                 step: "3",
@@ -913,26 +999,29 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.65 + i * 0.1 }}
               >
-                <Card className="p-5 h-full bg-primary/5 border-primary/10" data-testid={`card-step-${i}`}>
+                <Card className="p-5 h-full border-gray-200/80 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02]" data-testid={`card-step-${i}`}>
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <span className="text-sm font-bold text-primary-foreground">{item.step}</span>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+                      <span className="text-sm font-bold text-white">{item.step}</span>
                     </div>
                     <div className="space-y-1.5">
                       <h4 className="font-semibold text-sm">{item.title}</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+                      <p className="text-xs text-gray-500 dark:text-white/50 leading-relaxed">{item.description}</p>
                     </div>
                   </div>
                 </Card>
               </motion.div>
             ))}
           </div>
+        </motion.section>
+      </main>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+      <footer className="border-t border-gray-200/60 dark:border-white/[0.06] mt-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500 dark:text-white/50">
             <div className="flex items-center gap-2">
-              <Scale className="w-3.5 h-3.5" />
-              <span>PlainLegal — AI Legal Document Translator</span>
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>SignSafe — AI Contract Analysis & E-Signatures</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
@@ -940,8 +1029,8 @@ export default function Home() {
                 <SiDigitalocean className="w-3.5 h-3.5" />
                 <span>DigitalOcean Gradient AI</span>
               </div>
-              <span className="text-muted-foreground/40">|</span>
-              <span>DigitalOcean Gradient AI Hackathon</span>
+              <span className="opacity-40">|</span>
+              <span>Gradient AI Hackathon</span>
             </div>
           </div>
         </div>

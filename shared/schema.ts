@@ -116,15 +116,6 @@ export type RiskFlag = z.infer<typeof riskFlagSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 
-export const signatures = pgTable("signatures", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  name: text("name").notNull(),
-  signatureData: text("signature_data").notNull(),
-  type: text("type").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 export const signatureRequests = pgTable("signature_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   documentId: varchar("document_id").notNull(),
@@ -139,18 +130,11 @@ export const signatureRequests = pgTable("signature_requests", {
   signedAt: timestamp("signed_at"),
 });
 
-export const insertSignatureSchema = createInsertSchema(signatures).omit({
-  id: true,
-  createdAt: true,
-});
-
 export const insertSignatureRequestSchema = createInsertSchema(signatureRequests).omit({
   id: true,
   createdAt: true,
   signedAt: true,
 });
 
-export type InsertSignature = z.infer<typeof insertSignatureSchema>;
-export type Signature = typeof signatures.$inferSelect;
 export type InsertSignatureRequest = z.infer<typeof insertSignatureRequestSchema>;
 export type SignatureRequest = typeof signatureRequests.$inferSelect;
