@@ -37,14 +37,10 @@ import {
   ArrowRight,
   MessageSquare,
   Sparkles,
-  BookOpen,
   FileCheck,
   FileUp,
   X,
   PenTool,
-  GripVertical,
-  FileDown,
-  Calendar,
 } from "lucide-react";
 import { SiDigitalocean } from "react-icons/si";
 import { type Document } from "@shared/schema";

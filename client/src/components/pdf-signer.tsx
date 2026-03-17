@@ -12,7 +12,6 @@ import {
   Plus,
   X,
   Calendar,
-  GripVertical,
   ChevronLeft,
   ChevronRight,
   ZoomIn,
@@ -20,7 +19,6 @@ import {
   Move,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import * as pdfjsLib from "pdfjs-dist";
 
